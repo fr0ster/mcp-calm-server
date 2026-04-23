@@ -1,0 +1,86 @@
+{
+  "name": "@mcp-abap-adt/calm-server",
+  "version": "0.0.1",
+  "description": "MCP server + reusable tool primitives for SAP Cloud ALM, backed by @mcp-abap-adt/calm-client.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "calm-mcp": "dist/bin/stdio.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./tools": {
+      "types": "./dist/tools/index.d.ts",
+      "default": "./dist/tools/index.js"
+    },
+    "./registry": {
+      "types": "./dist/registry/index.d.ts",
+      "default": "./dist/registry/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "clean": "node -e \"const fs=require('fs');['dist','tsconfig.tsbuildinfo'].forEach(p=>{try{fs.rmSync(p,{recursive:true,force:true})}catch{}})\"",
+    "lint": "npx biome check --write src",
+    "lint:check": "npx biome check src",
+    "format": "npx biome format --write src",
+    "build": "npm run --silent clean && npx biome check src --diagnostic-level=error && npx tsc -p tsconfig.json",
+    "build:fast": "npx tsc -p tsconfig.json",
+    "test": "npx jest --runInBand",
+    "test:check": "npx tsc --noEmit --project tsconfig.test.integration.json",
+    "prepublishOnly": "npm run build"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fr0ster/mcp-calm-server.git"
+  },
+  "homepage": "https://github.com/fr0ster/mcp-calm-server#readme",
+  "bugs": {
+    "url": "https://github.com/fr0ster/mcp-calm-server/issues"
+  },
+  "author": "Oleksii Kyslytsia <oleksij.kyslytsja@gmail.com>",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "sap",
+    "cloud-alm",
+    "calm",
+    "mcp",
+    "mcp-server",
+    "tools"
+  ],
+  "peerDependencies": {
+    "@mcp-abap-adt/calm-client": "^0.1.0",
+    "@mcp-abap-adt/interfaces": "^7.1.0",
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.4",
+    "@mcp-abap-adt/auth-broker": "^1.0.5",
+    "@mcp-abap-adt/auth-providers": "^1.0.5",
+    "@mcp-abap-adt/auth-stores": "^1.0.4",
+    "@mcp-abap-adt/calm-client": "^0.1.0",
+    "@mcp-abap-adt/interfaces": "^7.1.0",
+    "@mcp-abap-adt/logger": "^0.1.4",
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.2.1",
+    "dotenv": "^17.3.1",
+    "jest": "^30.0.5",
+    "ts-jest": "^29.4.1",
+    "typescript": "^5.9.2"
+  }
+}

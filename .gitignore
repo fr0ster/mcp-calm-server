@@ -1,0 +1,21 @@
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+.DS_Store
+*.log
+
+# Compiled JS files in src (should be in dist)
+src/**/*.js
+src/**/*.js.map
+
+# Test configs and service keys
+src/__tests__/helpers/test-config.yaml
+sk.json
+*.env
+
+# Claude Code local settings
+.claude/settings.local.json
