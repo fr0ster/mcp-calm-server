@@ -1,6 +1,6 @@
 {
   "name": "@mcp-abap-adt/calm-server",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "MCP server + reusable tool primitives for SAP Cloud ALM, backed by @mcp-abap-adt/calm-client.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
