@@ -31,18 +31,28 @@ export interface ICalmToolDefinition {
  * (calm + logger); `args` is the validated input; result is whatever
  * the tool returns to the LLM.
  */
-export type CalmToolHandler<TArgs = unknown, TResult = unknown> = (
+/**
+ * Tool handler signature.
+ *
+ * NOTE: `TArgs` defaults to `any` (not `unknown`) on purpose —
+ * tool-entry arrays collect heterogeneously-typed tools, and `TArgs`
+ * sits in a contravariant (function-input) position. With `unknown`,
+ * a narrower concrete tool type cannot be assigned to the collection
+ * type. `any` is bivariant and sidesteps this. Individual tools still
+ * declare precise `TArgs` at their declaration site.
+ */
+// biome-ignore lint/suspicious/noExplicitAny: see doc comment above.
+export type CalmToolHandler<TArgs = any, TResult = unknown> = (
   context: ICalmHandlerContext,
   args: TArgs,
 ) => Promise<TResult>;
 
 /**
- * Registration unit — pairs a definition with its handler.
- *
- * This is the object exported from each `src/tools/<service>/*.ts`
- * module, and collected into `<SERVICE>_TOOLS` arrays.
+ * Registration unit — pairs a definition with its handler. See the
+ * `CalmToolHandler` doc comment for the `any` default rationale.
  */
-export interface ICalmHandlerEntry<TArgs = unknown, TResult = unknown> {
+// biome-ignore lint/suspicious/noExplicitAny: see CalmToolHandler.
+export interface ICalmHandlerEntry<TArgs = any, TResult = unknown> {
   toolDefinition: ICalmToolDefinition;
   handler: CalmToolHandler<TArgs, TResult>;
 }
