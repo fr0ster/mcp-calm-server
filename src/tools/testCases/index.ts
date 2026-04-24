@@ -1,8 +1,17 @@
 import { HandlerGroup } from '../../registry/HandlerGroup';
 import type { ICalmHandlerEntry } from '../../registry/types';
+import { getTestCaseTool } from './getTestCase';
+import { listTestCasesTool } from './listTestCases';
 
-// Tools land here as they are implemented (see PLAN.md milestones M2-M4).
-export const TESTCASES_HANDLERS: readonly ICalmHandlerEntry[] = [];
+export type { IGetTestCaseArgs } from './getTestCase';
+export { getTestCaseTool } from './getTestCase';
+export type { IListTestCasesArgs } from './listTestCases';
+export { listTestCasesTool } from './listTestCases';
+
+export const TESTCASES_HANDLERS: readonly ICalmHandlerEntry[] = [
+  listTestCasesTool,
+  getTestCaseTool,
+];
 
 export const TESTCASES_GROUP = new HandlerGroup(
   'testCases',

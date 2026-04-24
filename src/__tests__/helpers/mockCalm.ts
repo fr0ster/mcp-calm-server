@@ -1,17 +1,9 @@
 import type { CalmClient } from '@mcp-abap-adt/calm-client';
 
 export interface IRecordedCall {
-  method:
-    | 'list'
-    | 'get'
-    | 'getByDisplayId'
-    | 'create'
-    | 'update'
-    | 'delete'
-    | 'listStatuses'
-    | 'listPriorities';
+  service: string;
+  method: string;
   args: unknown[];
-  /** URL fragment (for list — the OData query string). Only set by `list`. */
   url?: string;
 }
 
@@ -20,45 +12,58 @@ export interface IMockCalmResult {
   calls: IRecordedCall[];
 }
 
+type Responder = (call: IRecordedCall) => unknown;
+
 /**
- * Minimal mock `CalmClient` for unit-testing Feature tools. Each method
- * records `{ method, args, url? }` and defers to the caller-supplied
- * responder. If the responder returns an Error instance, the method
- * throws it — so tests can exercise error-mapping paths.
+ * Generic mock `CalmClient`. Each `getXxx()` getter returns a proxy
+ * whose every method call is recorded as `{ service, method, args, url? }`
+ * and whose return value is produced by `respond`. If `respond` returns
+ * an Error, the method throws it (useful for error-mapping tests).
  */
-export function mockCalmForFeatures(
-  respond: (call: IRecordedCall) => unknown,
-): IMockCalmResult {
+export function mockCalm(respond: Responder): IMockCalmResult {
   const calls: IRecordedCall[] = [];
 
-  const wrap =
-    (method: IRecordedCall['method']) =>
-    async (...args: unknown[]) => {
-      let url: string | undefined;
-      if (method === 'list' && args[0] && typeof args[0] === 'object') {
-        url = (args[0] as { toQueryString(): string }).toQueryString();
-      }
-      const call: IRecordedCall = { method, args, url };
-      calls.push(call);
-      const out = respond(call);
-      if (out instanceof Error) throw out;
-      return out;
-    };
+  const makeServiceProxy = (service: string) =>
+    new Proxy(
+      {},
+      {
+        get(_target, methodKey) {
+          const method = String(methodKey);
+          return async (...args: unknown[]) => {
+            let url: string | undefined;
+            if (args[0] && typeof args[0] === 'object') {
+              const maybeQuery = args[0] as { toQueryString?: () => string };
+              if (typeof maybeQuery.toQueryString === 'function') {
+                url = maybeQuery.toQueryString();
+              }
+            }
+            const call: IRecordedCall = { service, method, args, url };
+            calls.push(call);
+            const out = respond(call);
+            if (out instanceof Error) throw out;
+            return out;
+          };
+        },
+      },
+    );
 
-  const features = {
-    list: wrap('list'),
-    get: wrap('get'),
-    getByDisplayId: wrap('getByDisplayId'),
-    create: wrap('create'),
-    update: wrap('update'),
-    delete: wrap('delete'),
-    listStatuses: wrap('listStatuses'),
-    listPriorities: wrap('listPriorities'),
-  };
-
-  const calm = {
-    getFeatures: () => features,
-  } as unknown as CalmClient;
+  const calm = new Proxy({} as CalmClient, {
+    get(_target, key) {
+      const name = String(key);
+      if (!name.startsWith('get') || name === 'getConnection') return undefined;
+      // getFeatures → 'features', getTestCases → 'testCases'
+      const service = name.slice(3, 4).toLowerCase() + name.slice(4);
+      return () => makeServiceProxy(service);
+    },
+  });
 
   return { calm, calls };
+}
+
+/**
+ * Narrower mock used by older Features tests — kept for backward
+ * compatibility. Prefer `mockCalm` for new tool tests.
+ */
+export function mockCalmForFeatures(respond: Responder): IMockCalmResult {
+  return mockCalm(respond);
 }

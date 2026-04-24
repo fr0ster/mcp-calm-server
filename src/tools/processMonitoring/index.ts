@@ -1,8 +1,16 @@
 import { HandlerGroup } from '../../registry/HandlerGroup';
 import type { ICalmHandlerEntry } from '../../registry/types';
+import { listBusinessProcessesTool } from './listBusinessProcesses';
 
-// Tools land here as they are implemented (see PLAN.md milestones M2-M4).
-export const PROCESSMONITORING_HANDLERS: readonly ICalmHandlerEntry[] = [];
+export type {
+  IListBusinessProcessesArgs,
+  IListBusinessProcessesResult,
+} from './listBusinessProcesses';
+export { listBusinessProcessesTool } from './listBusinessProcesses';
+
+export const PROCESSMONITORING_HANDLERS: readonly ICalmHandlerEntry[] = [
+  listBusinessProcessesTool,
+];
 
 export const PROCESSMONITORING_GROUP = new HandlerGroup(
   'processMonitoring',
