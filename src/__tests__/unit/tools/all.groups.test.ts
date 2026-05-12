@@ -37,7 +37,7 @@ describe('ALL_GROUPS aggregation', () => {
     }
   });
 
-  test('total tool count matches M8 target (32)', () => {
-    expect(ALL_HANDLERS).toHaveLength(32);
+  test('total tool count matches M9 target (35)', () => {
+    expect(ALL_HANDLERS).toHaveLength(35);
   });
 });

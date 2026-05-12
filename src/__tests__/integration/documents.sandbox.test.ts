@@ -1,5 +1,8 @@
+import { createDocumentTool } from '../../tools/documents/createDocument';
+import { deleteDocumentTool } from '../../tools/documents/deleteDocument';
 import { getDocumentTool } from '../../tools/documents/getDocument';
 import { listDocumentsTool } from '../../tools/documents/listDocuments';
+import { updateDocumentTool } from '../../tools/documents/updateDocument';
 import { ctx, describeSandbox } from './_sandbox';
 
 describeSandbox('documents tools (sandbox)', () => {
@@ -15,5 +18,28 @@ describeSandbox('documents tools (sandbox)', () => {
     if (!uuid) return;
     const res = await getDocumentTool.handler(ctx(), { uuid });
     expect(res).toHaveProperty('uuid', uuid);
+  });
+
+  // CRUD mutations (create/update/delete) intentionally NOT exercised
+  // against the shared sandbox. Reachability is checked via the
+  // INVALID_ARGUMENT guard, which fires before any network call.
+  describe('CRUD argument validation (no network)', () => {
+    it('create rejects missing title', async () => {
+      await expect(
+        createDocumentTool.handler(ctx(), {} as never),
+      ).rejects.toMatchObject({ code: 'INVALID_ARGUMENT' });
+    });
+
+    it('update rejects missing uuid', async () => {
+      await expect(
+        updateDocumentTool.handler(ctx(), { title: 'x' } as never),
+      ).rejects.toMatchObject({ code: 'INVALID_ARGUMENT' });
+    });
+
+    it('delete rejects missing uuid', async () => {
+      await expect(
+        deleteDocumentTool.handler(ctx(), {} as never),
+      ).rejects.toMatchObject({ code: 'INVALID_ARGUMENT' });
+    });
   });
 });
