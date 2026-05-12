@@ -1,27 +1,28 @@
 import { getProjectTool } from '../../tools/projects/getProject';
 import { listProjectsTool } from '../../tools/projects/listProjects';
+import type { IListResponse } from '../../utils';
 import { ctx, describeSandbox } from './_sandbox';
 
 describeSandbox('projects tools (sandbox)', () => {
-  describe('calm_projects_list', () => {
-    it('returns a list (possibly empty in shared sandbox)', async () => {
-      const res = await listProjectsTool.handler(ctx(), { limit: 3 });
-      expect(Array.isArray(res.items)).toBe(true);
-    });
+  // listProjects against the public sandbox is slow (25-28s typical);
+  // share the result across the two assertions instead of calling twice.
+  let list: IListResponse<Record<string, unknown>>;
+
+  beforeAll(async () => {
+    list = (await listProjectsTool.handler(ctx(), {
+      limit: 1,
+    })) as IListResponse<Record<string, unknown>>;
   });
 
-  describe('calm_projects_get', () => {
-    it('can fetch a project by id when the list is non-empty', async () => {
-      const list = await listProjectsTool.handler(ctx(), { limit: 1 });
-      if (list.items.length === 0) {
-        // Shared sandbox has 0 projects for most S-users; chained read is
-        // structurally testable, just not executable here. Skip cleanly.
-        return;
-      }
-      const id = (list.items[0] as { id?: string }).id;
-      if (!id) return;
-      const res = await getProjectTool.handler(ctx(), { id });
-      expect(res).toHaveProperty('id', id);
-    });
+  it('list returns an items array (possibly empty in shared sandbox)', () => {
+    expect(Array.isArray(list.items)).toBe(true);
+  });
+
+  it('chains list → get when the list is non-empty', async () => {
+    if (list.items.length === 0) return;
+    const id = (list.items[0] as { id?: string }).id;
+    if (!id) return;
+    const res = await getProjectTool.handler(ctx(), { id });
+    expect(res).toHaveProperty('id', id);
   });
 });
