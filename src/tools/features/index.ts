@@ -1,6 +1,8 @@
 import { HandlerGroup } from '../../registry/HandlerGroup';
 import type { ICalmHandlerEntry } from '../../registry/types';
+import { createExternalReferenceTool } from './createExternalReference';
 import { createFeatureTool } from './createFeature';
+import { deleteExternalReferenceTool } from './deleteExternalReference';
 import { deleteFeatureTool } from './deleteFeature';
 import { getFeatureTool } from './getFeature';
 import { getFeatureByDisplayIdTool } from './getFeatureByDisplayId';
@@ -9,8 +11,15 @@ import { listFeatureStatusesTool } from './listFeatureStatuses';
 import { listFeaturesTool } from './listFeatures';
 import { updateFeatureTool } from './updateFeature';
 
+export type { ICreateExternalReferenceArgs } from './createExternalReference';
+export { createExternalReferenceTool } from './createExternalReference';
 export type { ICreateFeatureArgs } from './createFeature';
 export { createFeatureTool } from './createFeature';
+export type {
+  IDeleteExternalReferenceArgs,
+  IDeleteExternalReferenceResult,
+} from './deleteExternalReference';
+export { deleteExternalReferenceTool } from './deleteExternalReference';
 export type {
   IDeleteFeatureArgs,
   IDeleteFeatureResult,
@@ -36,6 +45,8 @@ export const FEATURES_HANDLERS: readonly ICalmHandlerEntry[] = [
   createFeatureTool,
   updateFeatureTool,
   deleteFeatureTool,
+  createExternalReferenceTool,
+  deleteExternalReferenceTool,
   listFeatureStatusesTool,
   listFeaturePrioritiesTool,
 ];

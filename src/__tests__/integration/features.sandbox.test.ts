@@ -1,3 +1,5 @@
+import { createExternalReferenceTool } from '../../tools/features/createExternalReference';
+import { deleteExternalReferenceTool } from '../../tools/features/deleteExternalReference';
 import { getFeatureTool } from '../../tools/features/getFeature';
 import { getFeatureByDisplayIdTool } from '../../tools/features/getFeatureByDisplayId';
 import { listFeaturePrioritiesTool } from '../../tools/features/listFeaturePriorities';
@@ -29,8 +31,26 @@ describeSandbox('features tools (sandbox)', () => {
     });
   });
 
-  // CRUD mutations (create/update/delete) intentionally NOT exercised
-  // against the shared sandbox — see CALM_ALLOW_MUTATIONS in the M14 plan.
+  // CRUD mutations (create/update/delete + external references)
+  // intentionally NOT exercised against the shared sandbox.
+  describe('mutation argument validation (no network)', () => {
+    it('create_external_reference rejects missing parentUuid', async () => {
+      await expect(
+        createExternalReferenceTool.handler(ctx(), {
+          id: 'JIRA-1',
+          name: 'N',
+        } as never),
+      ).rejects.toMatchObject({ code: 'INVALID_ARGUMENT' });
+    });
+
+    it('delete_external_reference rejects missing id', async () => {
+      await expect(
+        deleteExternalReferenceTool.handler(ctx(), {
+          parentUuid: 'f1',
+        } as never),
+      ).rejects.toMatchObject({ code: 'INVALID_ARGUMENT' });
+    });
+  });
 
   describeWithProject('project-scoped reads (needs CALM_PROJECT_ID)', () => {
     it('lists features for the configured project', async () => {
