@@ -1,3 +1,4 @@
+import { createProjectTool } from '../../tools/projects/createProject';
 import { getProjectTool } from '../../tools/projects/getProject';
 import { listProjectsTool } from '../../tools/projects/listProjects';
 import type { IListResponse } from '../../utils';
@@ -24,5 +25,14 @@ describeSandbox('projects tools (sandbox)', () => {
     if (!id) return;
     const res = await getProjectTool.handler(ctx(), { id });
     expect(res).toHaveProperty('id', id);
+  });
+
+  // create intentionally NOT exercised against the shared sandbox — a
+  // project is a heavy entity that would persist visibly to every other
+  // sandbox tenant.
+  it('create rejects missing name', async () => {
+    await expect(
+      createProjectTool.handler(ctx(), {} as never),
+    ).rejects.toMatchObject({ code: 'INVALID_ARGUMENT' });
   });
 });
