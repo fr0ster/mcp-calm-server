@@ -11,9 +11,14 @@ let loaded = false;
  */
 export function loadEnv(): void {
   if (loaded) return;
+  loaded = true;
+  // Under Jest, never auto-load a cwd-level .env: unit tests assert on
+  // the absence of CALM_* vars, and a developer's local sandbox .env
+  // would otherwise leak into that suite and make assertions flaky.
+  // Smoke scripts and the stdio bin explicitly call dotenvConfig themselves.
+  if (process.env.JEST_WORKER_ID) return;
   const path = resolve(process.cwd(), '.env');
   if (existsSync(path)) dotenvConfig({ path });
-  loaded = true;
 }
 
 export type CalmServerMode = 'oauth2' | 'sandbox';
