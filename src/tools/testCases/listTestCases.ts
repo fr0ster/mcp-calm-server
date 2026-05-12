@@ -14,13 +14,11 @@ import {
   toListResponse,
 } from '../../utils';
 
-const DEFAULT_FIELDS = [
-  'uuid',
-  'title',
-  'statusCode',
-  'projectId',
-  'modifiedAt',
-] as const;
+// `statusCode` was previously in DEFAULT_FIELDS but the ManualTestCases
+// OData type doesn't actually expose it — sandbox returns 400 on
+// $select=statusCode. Kept in ALLOWED_FIELDS so a caller can opt-in
+// explicitly against a tenant that does expose it.
+const DEFAULT_FIELDS = ['uuid', 'title', 'projectId', 'modifiedAt'] as const;
 
 const ALLOWED_FIELDS = [
   'uuid',

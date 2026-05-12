@@ -14,13 +14,15 @@ import {
   toListResponse,
 } from '../../utils';
 
+// `parentNodeUuid` and `rootNodeUuid` were previously in DEFAULT_FIELDS
+// but HierarchyNodes doesn't expose either — sandbox returns 400 on
+// $select. Kept in ALLOWED_FIELDS so a caller can opt in against a
+// tenant that does expose them.
 const DEFAULT_FIELDS = [
   'uuid',
   'displayId',
   'title',
   'hierarchyLevel',
-  'parentNodeUuid',
-  'rootNodeUuid',
 ] as const;
 
 const ALLOWED_FIELDS = [
