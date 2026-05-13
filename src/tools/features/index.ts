@@ -6,6 +6,7 @@ import { deleteExternalReferenceTool } from './deleteExternalReference';
 import { deleteFeatureTool } from './deleteFeature';
 import { getFeatureTool } from './getFeature';
 import { getFeatureByDisplayIdTool } from './getFeatureByDisplayId';
+import { listExternalReferencesTool } from './listExternalReferences';
 import { listFeaturePrioritiesTool } from './listFeaturePriorities';
 import { listFeatureStatusesTool } from './listFeatureStatuses';
 import { listFeaturesTool } from './listFeatures';
@@ -29,6 +30,8 @@ export type { IGetFeatureArgs } from './getFeature';
 export { getFeatureTool } from './getFeature';
 export type { IGetFeatureByDisplayIdArgs } from './getFeatureByDisplayId';
 export { getFeatureByDisplayIdTool } from './getFeatureByDisplayId';
+export type { IListExternalReferencesArgs } from './listExternalReferences';
+export { listExternalReferencesTool } from './listExternalReferences';
 export type { IListFeaturePrioritiesResult } from './listFeaturePriorities';
 export { listFeaturePrioritiesTool } from './listFeaturePriorities';
 export type { IListFeatureStatusesResult } from './listFeatureStatuses';
@@ -47,6 +50,7 @@ export const FEATURES_HANDLERS: readonly ICalmHandlerEntry[] = [
   deleteFeatureTool,
   createExternalReferenceTool,
   deleteExternalReferenceTool,
+  listExternalReferencesTool,
   listFeatureStatusesTool,
   listFeaturePrioritiesTool,
 ];

@@ -5,8 +5,8 @@ describe('FEATURES group registration', () => {
     expect(FEATURES_GROUP.getName()).toBe('features');
   });
 
-  test('exposes all 10 handlers', () => {
-    expect(FEATURES_HANDLERS).toHaveLength(10);
+  test('exposes all 11 handlers', () => {
+    expect(FEATURES_HANDLERS).toHaveLength(11);
   });
 
   test('tool names are namespaced under calm_features_*', () => {
@@ -19,6 +19,7 @@ describe('FEATURES group registration', () => {
       'calm_features_get',
       'calm_features_get_by_display_id',
       'calm_features_list',
+      'calm_features_list_external_references',
       'calm_features_list_priorities',
       'calm_features_list_statuses',
       'calm_features_update',
