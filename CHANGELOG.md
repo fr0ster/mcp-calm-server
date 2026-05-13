@@ -1,5 +1,78 @@
 # Changelog
 
+## 0.2.0 — 2026-05-13
+
+Parity with the consetto-Rust port plus a wider bonus surface, live
+integration coverage, and a logger that is safe to use under MCP
+stdio. **54 tools** (was 23), **232 tests** (was 103), full build
+green.
+
+### Added
+
+- **Tasks CRUD (M7)** — `create`, `update`, `delete`, `create_comment`.
+- **TestCases CRUD (M8)** — `create`, `update`, `delete`, plus nested
+  `create_activity` / `create_action`.
+- **Documents CRUD (M9)** — `create`, `update`, `delete`.
+- **Hierarchy CRUD (M10)** — `create_node`, `update_node`,
+  `delete_node`.
+- **Feature external references (M11)** —
+  `create_external_reference`, `delete_external_reference`.
+- **Projects writes (M12)** — `create`.
+- **Logs writes (M13)** — `post` (OpenTelemetry-style record
+  ingestion).
+- **Bonus read tools (M16, +12)** — surface every read method already
+  in `calm-client` that consetto-Rust does not expose:
+  - `documents.list_statuses`, `documents.list_types`
+  - `projects.list_programs`, `projects.get_program`,
+    `projects.list_team_members`, `projects.list_timeboxes`
+  - `features.list_external_references`
+  - `tasks.list_deliverables`, `tasks.list_workstreams`,
+    `tasks.list_references`
+  - `testCases.list_activities`, `testCases.list_actions`
+- **Integration test suite (M14)** under
+  `src/__tests__/integration/*.sandbox.test.ts` — one file per service,
+  gated on env, runs against the SAP sandbox in CI.
+- **Live OAuth2 gates (M17)** —
+  `describeWhenLive`, `describeOAuth2`, `describeMutating` alongside
+  the existing sandbox gates. Mutation tests are opt-in via
+  `CALM_ALLOW_MUTATIONS=1` and always finalise via
+  `try/finally { delete }`.
+- **`StderrLogger` (M15)** — minimal `ILogger` that routes every level
+  to stderr. Wired into `runStdio` so the bin emits lifecycle events
+  (start, transport bound, shutdown) without ever touching stdout
+  (which MCP-stdio reserves for the JSON-RPC frame stream). The
+  family's `PinoLogger` / `DefaultLogger` write `info`/`debug` to
+  stdout by default — using either inside a stdio MCP server would
+  corrupt every call.
+- **`scripts/smoke-sandbox.mjs`** — 30-second smoke check: spawns the
+  stdio bin, lists tools, exercises a handful of read endpoints,
+  exits non-zero on any unexpected failure.
+
+### Fixed
+
+- `list_hierarchy` and `list_test_cases` no longer ship sandbox-
+  incompatible properties in their default `$select`. The sandbox
+  OData type does not expose `parentNodeUuid` / `rootNodeUuid` on
+  `HierarchyNodes`, nor `statusCode` on `ManualTestCases`; defaults
+  returned 400 against the sandbox. Removed from `DEFAULT_FIELDS`;
+  callers can still opt in via `fields: [...]` against a tenant that
+  exposes them.
+- `config.loadEnv` no longer reads the cwd-level `.env` under Jest.
+  The config-unit suite assumes a clean env; a developer's local
+  sandbox `.env` was silently leaking into it. Smoke scripts and the
+  stdio bin load `.env` explicitly via `dotenv` themselves.
+
+### Notes
+
+- All HTTP / OData work lives in `@mcp-abap-adt/calm-client`. This
+  package is pure tool-shim: JSON Schema, args validation, error
+  mapping. The 19 new mutation tools added in M7–M13 required *zero*
+  changes to the client.
+- Mutations against the shared SAP sandbox at `api.sap.com` are
+  intentionally not exercised by `npm test`; reachability is verified
+  via each tool's `INVALID_ARGUMENT` guard. Real ingestion happens
+  only under `describeMutating` on an opt-in live backend.
+
 ## 0.1.0 — 2026-04-24
 
 First usable release. 23 MCP tools covering all 9 Cloud ALM services,

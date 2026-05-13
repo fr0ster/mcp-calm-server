@@ -4,8 +4,9 @@
 
 MCP server for **SAP Cloud ALM**, built on
 [`@mcp-abap-adt/calm-client`](https://github.com/fr0ster/mcp-calm-client).
-Ships 23 MCP tools covering all 9 Cloud ALM services, with rich JSON
-Schema descriptions that let an LLM plan multi-step workflows.
+Ships **54 MCP tools** covering all 9 Cloud ALM services — full CRUD
+where the service supports it, plus a wide read surface — with rich
+JSON Schema descriptions that let an LLM plan multi-step workflows.
 
 This package is **dual-purpose**:
 
@@ -17,9 +18,10 @@ This package is **dual-purpose**:
 
 ## Status
 
-**0.1.0** — 23 tools, 103 unit tests, full build green. Integration
-against a live Cloud ALM tenant/sandbox is driven by the host — no
-server-side credential storage beyond the standalone `.env`.
+**0.2.0** — 54 tools, 232 tests (224 unit + integration, 7 env-gated
+skips, 1 todo), full build green. Integration suite runs live against
+the SAP sandbox (api.sap.com) or any OAuth2 Cloud ALM tenant with a
+single `.env` switch; gates skip cleanly when no backend is wired.
 
 ## Installation
 
@@ -101,7 +103,7 @@ on macOS, `%APPDATA%\Claude\claude_desktop_config.json` on Windows):
 }
 ```
 
-Restart Claude Desktop; the 23 `calm_*` tools become available to the
+Restart Claude Desktop; the 54 `calm_*` tools become available to the
 model.
 
 ## Library: composing into another MCP server
@@ -145,19 +147,19 @@ import { ALL_GROUPS } from '@mcp-abap-adt/calm-server/tools';
 import { CalmToolRegistry } from '@mcp-abap-adt/calm-server/registry';
 ```
 
-## Tool surface (23 tools across 9 services)
+## Tool surface (54 tools across 9 services)
 
 | Service | Tools |
 |---|---|
-| **Features** (8) | `list`, `get`, `get_by_display_id`, `create`, `update`, `delete`, `list_statuses`, `list_priorities` |
-| **Documents** (2) | `list`, `get` |
-| **TestCases** (2) | `list`, `get` |
-| **Hierarchy** (2) | `list`, `get_with_children` (default `$expand=[toChildNodes, toParentNode]`) |
+| **Features** (11) | `list`, `get`, `get_by_display_id`, `create`, `update`, `delete`, `create_external_reference`, `delete_external_reference`, `list_external_references`, `list_statuses`, `list_priorities` |
+| **Tasks** (10) | `list`, `get`, `create`, `update`, `delete`, `list_comments`, `create_comment`, `list_references`, `list_deliverables`, `list_workstreams` |
+| **TestCases** (9) | `list`, `get`, `create`, `update`, `delete`, `create_activity`, `create_action`, `list_activities`, `list_actions` |
+| **Documents** (7) | `list`, `get`, `create`, `update`, `delete`, `list_statuses`, `list_types` |
+| **Projects** (7) | `list`, `get`, `create`, `list_programs`, `get_program`, `list_team_members`, `list_timeboxes` |
+| **Hierarchy** (5) | `list`, `get_with_children`, `create_node`, `update_node`, `delete_node` |
 | **Analytics** (2, read-only) | `query` (17 endpoints), `list_providers` (static catalog) |
+| **Logs** (2, domain-specific REST) | `get` (provider + serviceId + time window), `post` (inbound log records) |
 | **ProcessMonitoring** (1, read-only) | `list_processes` |
-| **Tasks** (3) | `list`, `get`, `list_comments` |
-| **Projects** (2) | `list`, `get` |
-| **Logs** (1, domain-specific REST) | `get` (provider + serviceId + time window) |
 
 Every MCP tool:
 - Has a full JSON Schema with descriptions — the LLM reads these to plan.
@@ -173,11 +175,20 @@ See `src/tools/<service>/*.ts` for per-tool argument schemas.
 
 ## Destructive tools (write operations)
 
-Currently only **Features** exposes `create` / `update` / `delete`. For
-the other 8 services, destructive tools are deferred to a future minor
-release — they require live-tenant validation before the patterns are
-promoted. If you need them earlier, open an issue or contribute via the
-per-service handler modules; pattern is identical to the Features ones.
+Every Cloud ALM service that supports writes is now exposed:
+
+- **Features**: `create`, `update`, `delete`, plus external-reference
+  `create` / `delete`
+- **Tasks**: `create`, `update`, `delete`, `create_comment`
+- **TestCases**: `create`, `update`, `delete`, plus nested
+  `create_activity` / `create_action`
+- **Documents**: `create`, `update`, `delete`
+- **Hierarchy**: `create_node`, `update_node`, `delete_node`
+- **Projects**: `create`
+- **Logs**: `post` (inbound OpenTelemetry-style record ingestion)
+
+The shared SAP sandbox at `api.sap.com` is read-friendly only — mutation
+integration tests are opt-in (see Live-tenant integration below).
 
 ## Debug logging
 
@@ -197,16 +208,28 @@ git clone git@github.com:fr0ster/mcp-calm-server.git
 cd mcp-calm-server
 npm install
 
-npm run test           # 103 unit tests, no network
+npm run test           # 224 unit + integration tests
 npm run build          # emits dist/, includes executable bin
 npm run lint:check     # biome
 ```
 
-No integration tests in this package — the `CalmClient` peer already
-covers live-tenant verification (see
-[mcp-calm-client/docs/TESTING.md](https://github.com/fr0ster/mcp-calm-client/blob/main/docs/TESTING.md)).
-Tools here only mediate between MCP and the client; their contracts
-are fully exercised via mocks.
+### Live-tenant integration
+
+`src/__tests__/integration/` runs against a real backend when env is
+present, and skips cleanly when it isn't (so `npm test` without secrets
+is always green). Five gates, drop them into `.env`:
+
+| Gate | Env trigger | What it unlocks |
+|---|---|---|
+| `describeSandbox` | `CALM_MODE=sandbox` + `CALM_API_KEY` | The `api.sap.com` sandbox |
+| `describeOAuth2` | `CALM_MODE=oauth2` + `CALM_BASE_URL` + 3× UAA env | Live tenant (incl. endpoints absent from the sandbox catalog, e.g. Business Processes) |
+| `describeWhenLive` | either of the above | Read-side tests that work in either mode |
+| `describeWithProject` | live backend + `CALM_PROJECT_ID` | Project-scoped chains (features list→get, tasks list→get→comments, …) |
+| `describeMutating` | live + `CALM_PROJECT_ID` + `CALM_ALLOW_MUTATIONS=1` | Write tests (every mutation finalises via `try/finally { delete }`) |
+
+A quick smoke script lives at `scripts/smoke-sandbox.mjs` — spawns the
+stdio bin, lists tools, calls a handful of read endpoints, and exits
+1 on any non-skip failure.
 
 ## License
 
