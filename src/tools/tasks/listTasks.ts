@@ -92,25 +92,30 @@ const handler: CalmToolHandler<
   }
   const limit = clampListLimit(args.limit);
   const offset = args.offset && args.offset > 0 ? Math.floor(args.offset) : 0;
-  const filter = joinAndFilters(
-    `projectId eq '${escapeODataString(args.projectId)}'`,
-    args.status ? `status eq '${escapeODataString(args.status)}'` : undefined,
-    args.assigneeId
-      ? `assigneeId eq '${escapeODataString(args.assigneeId)}'`
-      : undefined,
-  );
-  const fields =
-    args.fields && args.fields.length > 0 ? args.fields : DEFAULT_FIELDS;
-  let query = ODataQuery.new()
-    .select([...fields])
-    .top(limit)
-    .skip(offset);
-  if (filter) query = query.filter(filter);
-  if (args.withCount) query = query.count();
+  // The Tasks service controller does NOT accept OData query
+  // semantics — `$select`, `$top`, and likely `$filter` all return
+  // 400 ("not supported yet"). It only honours `?projectId=<uuid>`
+  // on the URL. The full row set comes back; status/assignee
+  // filtering and pagination/limit happen client-side here.
+  const remoteFilters = {
+    status: args.status,
+    assigneeId: args.assigneeId,
+  };
 
   try {
-    const collection = await ctx.calm.getTasks().list(query);
-    return toListResponse(collection, { limit, offset });
+    const collection = await ctx.calm.getTasks().list(args.projectId);
+    let all = (collection.value ?? []) as Partial<ITask>[];
+    if (remoteFilters.status !== undefined) {
+      all = all.filter((t) => t.status === remoteFilters.status);
+    }
+    if (remoteFilters.assigneeId !== undefined) {
+      all = all.filter((t) => t.assigneeId === remoteFilters.assigneeId);
+    }
+    const paged = all.slice(offset, offset + limit);
+    return toListResponse(
+      { value: paged, '@odata.count': args.withCount ? all.length : undefined },
+      { limit, offset },
+    );
   } catch (err) {
     throw mapCalmErrorForTool(err);
   }

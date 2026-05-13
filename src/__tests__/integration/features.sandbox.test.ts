@@ -82,7 +82,10 @@ describeSandbox('features tools (sandbox)', () => {
       if (list.items.length === 0) return;
       const displayId = (list.items[0] as { displayId?: string }).displayId;
       if (!displayId) return;
-      const res = await getFeatureByDisplayIdTool.handler(ctx(), { displayId });
+      const res = await getFeatureByDisplayIdTool.handler(ctx(), {
+        projectId: PROJECT_ID as string,
+        displayId,
+      });
       expect(res).toHaveProperty('displayId', displayId);
     });
   });

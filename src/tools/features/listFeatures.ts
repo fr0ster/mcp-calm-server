@@ -121,8 +121,10 @@ function buildQuery(args: IListFeaturesArgs): {
   const limit = clampListLimit(args.limit);
   const offset = args.offset && args.offset > 0 ? Math.floor(args.offset) : 0;
 
+  // projectId is now passed positionally to calm.getFeatures().list
+  // and ends up on the URL as ?projectId=…; it must NOT also appear
+  // in $filter.
   const filter = joinAndFilters(
-    `projectId eq '${escapeODataString(args.projectId)}'`,
     args.status
       ? `statusCode eq '${escapeODataString(args.status)}'`
       : undefined,
@@ -159,7 +161,7 @@ const handler: CalmToolHandler<
   }
   const { query, limit, offset } = buildQuery(args);
   try {
-    const collection = await ctx.calm.getFeatures().list(query);
+    const collection = await ctx.calm.getFeatures().list(args.projectId, query);
     return toListResponse(collection, { limit, offset });
   } catch (err) {
     throw mapCalmErrorForTool(err);

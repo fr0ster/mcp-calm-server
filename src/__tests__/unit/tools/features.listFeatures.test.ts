@@ -17,9 +17,12 @@ function mockCalmClient(respond: (calls: IRecordedListCall[]) => unknown): {
   const calls: IRecordedListCall[] = [];
   const calm = {
     getFeatures: () => ({
-      list: async (query: { toQueryString(): string }) => {
+      list: async (projectId: string, query: { toQueryString(): string }) => {
         const qs = query.toQueryString();
-        calls.push({ url: `/Features${qs}` });
+        const sep = qs ? '&' : '';
+        calls.push({
+          url: `/Features?projectId=${encodeURIComponent(projectId)}${sep}${qs.replace(/^\?/, '')}`,
+        });
         const result = respond(calls);
         if (result instanceof Error) throw result;
         return result;
@@ -59,35 +62,40 @@ describe('calm_features_list tool', () => {
     ).rejects.toMatchObject({ code: 'INVALID_ARGUMENT' });
   });
 
-  test('default list: applies projectId filter, default fields, default limit', async () => {
+  test('default list: emits projectId as URL param, default fields, default limit', async () => {
     const { calls } = await invoke({ projectId: 'P1' });
     const url = calls[0].url ?? '';
-    expect(decodeURIComponent(url)).toContain("projectId eq 'P1'");
+    expect(url).toContain('projectId=P1');
+    expect(url).not.toContain("projectId%20eq%20'");
     expect(url).toContain(
       '$select=uuid,displayId,title,statusCode,priorityCode,modifiedAt',
     );
     expect(url).toContain(`$top=${DEFAULT_LIST_LIMIT}`);
   });
 
-  test('composes status + priority + responsible filters with and', async () => {
+  test('composes status + priority + responsible filters with and (no projectId in $filter)', async () => {
     const { calls } = await invoke({
       projectId: 'P1',
       status: 'OPEN',
       priorityCode: 'HIGH',
       responsibleId: 'u1',
     });
-    const decoded = decodeURIComponent(calls[0].url ?? '');
-    expect(decoded).toContain("projectId eq 'P1'");
+    const url = calls[0].url ?? '';
+    const decoded = decodeURIComponent(url);
+    expect(url).toContain('projectId=P1');
+    expect(decoded).not.toContain("projectId eq 'P1'");
     expect(decoded).toContain("statusCode eq 'OPEN'");
     expect(decoded).toContain("priorityCode eq 'HIGH'");
     expect(decoded).toContain("responsibleId eq 'u1'");
     expect(decoded).toContain(' and ');
   });
 
-  test('escapes single quotes in projectId filter literal', async () => {
+  test('passes raw projectId on the URL (apostrophe stays unencoded)', async () => {
     const { calls } = await invoke({ projectId: "o'reilly" });
     const url = calls[0].url ?? '';
-    expect(url).toContain('%27o%27%27reilly%27');
+    // encodeURIComponent leaves `'` alone per JS spec (it's in the
+    // unreserved set); the Spring controller decodes the UUID anyway.
+    expect(url).toContain("projectId=o'reilly");
   });
 
   test('fields param narrows $select', async () => {

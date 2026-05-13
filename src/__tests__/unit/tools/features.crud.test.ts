@@ -51,11 +51,11 @@ describe('feature CRUD tools', () => {
       }));
       const result = await getFeatureByDisplayIdTool.handler(
         { calm },
-        { displayId: '6-123' },
+        { projectId: 'P1', displayId: '6-123' },
       );
       expect(calls[0]).toMatchObject({
         method: 'getByDisplayId',
-        args: ['6-123'],
+        args: ['P1', '6-123'],
       });
       expect(result.displayId).toBe('6-123');
     });
@@ -65,7 +65,10 @@ describe('feature CRUD tools', () => {
         CalmApiError.fromNotFound('Feature', '6-999'),
       );
       await expect(
-        getFeatureByDisplayIdTool.handler({ calm }, { displayId: '6-999' }),
+        getFeatureByDisplayIdTool.handler(
+          { calm },
+          { projectId: 'P1', displayId: '6-999' },
+        ),
       ).rejects.toMatchObject({ code: 'NOT_FOUND' });
     });
   });

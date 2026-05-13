@@ -123,15 +123,25 @@ describe('M4 — read-only tools across 8 services', () => {
   });
 
   describe('tasks', () => {
-    test('list requires projectId, emits filter', async () => {
-      const { calm, calls } = mockCalm(() => ({ value: [] }));
-      await listTasksTool.handler(
+    test('list passes only projectId; status is filtered client-side', async () => {
+      // The Tasks service rejects every OData query param ($select,
+      // $top, $filter…) as "not supported yet" — only `?projectId=`
+      // is honoured on the URL. listTasksTool therefore calls
+      // calm.getTasks().list with just a positional projectId and
+      // performs status/assignee filtering + pagination locally.
+      const { calm, calls } = mockCalm(() => ({
+        value: [
+          { id: 't1', status: 'OPEN', title: 'A' },
+          { id: 't2', status: 'CLOSED', title: 'B' },
+        ],
+      }));
+      const res = await listTasksTool.handler(
         { calm },
         { projectId: 'P1', status: 'OPEN' },
       );
-      const url = decodeURIComponent(calls[0].url ?? '');
-      expect(url).toContain("projectId eq 'P1'");
-      expect(url).toContain("status eq 'OPEN'");
+      expect(calls[0].method).toBe('list');
+      expect(calls[0].args).toEqual(['P1']);
+      expect(res.items).toEqual([{ id: 't1', status: 'OPEN', title: 'A' }]);
     });
 
     test('list rejects without projectId', async () => {

@@ -1,5 +1,62 @@
 # Changelog
 
+## 0.3.0 — 2026-05-13
+
+Follows `@mcp-abap-adt/calm-client@0.3.0` (issue / PR #3 / #4 there).
+Closes a wider class of the same bug fixed in 0.2.1: every list
+endpoint whose Spring controller takes `@RequestParam UUID projectId`
+must carry `projectId` on the URL, not in OData `$filter`. After the
+earlier deliverables/workstreams fix, two more came out the moment a
+sandbox `projectId` became available: `listTasks` and `listFeatures`.
+
+### Changed (BREAKING for two tool input schemas)
+
+- **`calm_features_get_by_display_id`** — `projectId` is now
+  `required`. The `getFeatureByDisplayId` endpoint delegates through
+  `listFeatures`, which now needs project scope; and the displayId
+  itself (`6-123`) is project-scoped anyway, so this matches the
+  underlying data model.
+
+### Fixed (internal, no schema impact)
+
+- **`calm_tasks_list` / `calm_features_list`** — projectId is now
+  forwarded positionally to the calm-client (not stuffed into
+  `$filter`), aligning with the server's `?projectId=<uuid>` URL
+  contract.
+- **`calm_tasks_list`** — Tasks service rejects every OData query
+  parameter (`$select`, `$top`, `$filter` all return 400 "not
+  supported yet") despite returning an OData-collection shape. The
+  tool now calls `calm.getTasks().list(projectId)` with no query and
+  performs status/assignee filtering and limit/offset pagination
+  locally. The `fields` arg is kept for API symmetry but accepted as
+  a downstream hint only — the full record comes back from the wire.
+
+### Updated
+
+- Peer dependency `@mcp-abap-adt/calm-client` bumped `^0.2.0` →
+  `^0.3.0`. Required by the projectId-positional signatures on
+  `list` / `getByDisplayId`.
+
+### Discovery / debugging
+
+- The bug was latent until a borrowed sandbox `projectId` (leaked
+  through a public `test_case.projectId`) activated the
+  `describeWithProject` integration gate. Five tests failed with the
+  same HTTP 400 root cause, plus two more Tasks-only "not supported
+  yet" 400s on `$select` / `$top`.
+- The Tasks service's non-OData nature is now documented in the
+  source (and via this entry) — future tools targeting `/tasks/*`
+  should not assume OData semantics.
+
+### Tests
+
+- Updated unit tests for `listFeatures` (URL-based projectId, no
+  `$filter` for it), `listTasks` (no OData query at all, client-side
+  filter), and `getByDisplayId` (projectId+displayId positional args).
+- Integration sandbox suite now exercises five project-scoped reads
+  end-to-end against a borrowed projectId — 230 passed / 2 skipped
+  (oauth2 only) / 1 todo.
+
 ## 0.2.1 — 2026-05-13
 
 Same-day follow-up to 0.2.0: realigns two bonus tools with
