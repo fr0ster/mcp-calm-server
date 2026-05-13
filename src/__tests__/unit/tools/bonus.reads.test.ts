@@ -138,30 +138,52 @@ describe('bonus read tools (M16)', () => {
 
   // ---------- tasks ----------
   describe('calm_tasks_list_deliverables', () => {
-    test('returns items', async () => {
-      const { calm } = mockCalm(() => ({
-        value: [{ id: 'd1', name: 'D' }],
-      }));
-      const res = await listDeliverablesTool.handler({ calm }, {});
-      expect(res.items).toHaveLength(1);
+    test('rejects missing projectId', async () => {
+      const { calm } = mockCalm(() => ({}));
+      await expect(
+        listDeliverablesTool.handler({ calm }, {} as never),
+      ).rejects.toMatchObject({ code: 'INVALID_ARGUMENT' });
     });
 
-    test('builds projectId filter when supplied', async () => {
-      const { calm, calls } = mockCalm(() => ({ value: [] }));
-      await listDeliverablesTool.handler({ calm }, { projectId: 'P' });
-      expect(decodeURIComponent(calls[0].url ?? '')).toContain(
-        "projectId eq 'P'",
+    test('forwards projectId positionally to calm.tasks.listDeliverables', async () => {
+      const { calm, calls } = mockCalm(() => ({
+        value: [{ id: 'd1', name: 'D' }],
+      }));
+      const res = await listDeliverablesTool.handler(
+        { calm },
+        { projectId: 'P' },
       );
+      expect(res.items).toHaveLength(1);
+      expect(calls[0]).toMatchObject({
+        service: 'tasks',
+        method: 'listDeliverables',
+      });
+      expect(calls[0].args[0]).toBe('P');
     });
   });
 
   describe('calm_tasks_list_workstreams', () => {
-    test('returns items', async () => {
-      const { calm } = mockCalm(() => ({
+    test('rejects missing projectId', async () => {
+      const { calm } = mockCalm(() => ({}));
+      await expect(
+        listWorkstreamsTool.handler({ calm }, {} as never),
+      ).rejects.toMatchObject({ code: 'INVALID_ARGUMENT' });
+    });
+
+    test('forwards projectId positionally to calm.tasks.listWorkstreams', async () => {
+      const { calm, calls } = mockCalm(() => ({
         value: [{ id: 'w1', name: 'W' }],
       }));
-      const res = await listWorkstreamsTool.handler({ calm }, {});
+      const res = await listWorkstreamsTool.handler(
+        { calm },
+        { projectId: 'P' },
+      );
       expect(res.items).toHaveLength(1);
+      expect(calls[0]).toMatchObject({
+        service: 'tasks',
+        method: 'listWorkstreams',
+      });
+      expect(calls[0].args[0]).toBe('P');
     });
   });
 

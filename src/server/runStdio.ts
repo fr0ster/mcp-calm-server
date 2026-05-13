@@ -6,7 +6,7 @@ import { readConfig } from './config';
 import { StderrLogger } from './stderrLogger';
 
 const PACKAGE_NAME = '@mcp-abap-adt/calm-server';
-const PACKAGE_VERSION = '0.2.0';
+const PACKAGE_VERSION = '0.2.1';
 
 /**
  * Entry point for standalone stdio mode. Reads `.env` + env vars,

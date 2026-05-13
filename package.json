@@ -1,6 +1,6 @@
 {
   "name": "@mcp-abap-adt/calm-server",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "MCP server + reusable tool primitives for SAP Cloud ALM, backed by @mcp-abap-adt/calm-client.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -63,7 +63,7 @@
     "tools"
   ],
   "peerDependencies": {
-    "@mcp-abap-adt/calm-client": "^0.1.0",
+    "@mcp-abap-adt/calm-client": "^0.2.0",
     "@mcp-abap-adt/interfaces": "^7.1.0",
     "@modelcontextprotocol/sdk": "^1.0.0"
   },
@@ -72,7 +72,7 @@
     "@mcp-abap-adt/auth-broker": "^1.0.5",
     "@mcp-abap-adt/auth-providers": "^1.0.5",
     "@mcp-abap-adt/auth-stores": "^1.0.4",
-    "@mcp-abap-adt/calm-client": "^0.1.0",
+    "@mcp-abap-adt/calm-client": "^0.2.0",
     "@mcp-abap-adt/interfaces": "^7.1.0",
     "@mcp-abap-adt/logger": "^0.1.4",
     "@modelcontextprotocol/sdk": "^1.0.0",

@@ -5,17 +5,16 @@ import type {
   ICalmToolDefinition,
 } from '../../registry/types';
 import {
+  CalmToolError,
   clampListLimit,
-  escapeODataString,
   type IListResponse,
-  joinAndFilters,
   MAX_LIST_LIMIT,
   mapCalmErrorForTool,
   toListResponse,
 } from '../../utils';
 
 export interface IListWorkstreamsArgs {
-  projectId?: string;
+  projectId: string;
   limit?: number;
   offset?: number;
   withCount?: boolean;
@@ -24,11 +23,15 @@ export interface IListWorkstreamsArgs {
 const definition: ICalmToolDefinition = {
   name: 'calm_tasks_list_workstreams',
   description:
-    'List Cloud ALM workstreams (the workstream taxonomy tasks can be grouped under). Optionally scope to a project via `projectId`.',
+    'List Cloud ALM workstreams (the grouping taxonomy tasks can be filed under) for a project. Requires `projectId` — same @RequestParam UUID contract as calm_tasks_list_deliverables.',
   inputSchema: {
     type: 'object',
+    required: ['projectId'],
     properties: {
-      projectId: { type: 'string', description: 'Optional project scope.' },
+      projectId: {
+        type: 'string',
+        description: 'Project id (required scope).',
+      },
       limit: { type: 'integer', minimum: 1, maximum: MAX_LIST_LIMIT },
       offset: { type: 'integer', minimum: 0 },
       withCount: { type: 'boolean' },
@@ -40,18 +43,20 @@ const handler: CalmToolHandler<
   IListWorkstreamsArgs,
   IListResponse<IWorkstream>
 > = async (ctx, args) => {
-  const limit = clampListLimit(args?.limit);
-  const offset = args?.offset && args.offset > 0 ? Math.floor(args.offset) : 0;
-  const filter = joinAndFilters(
-    args?.projectId
-      ? `projectId eq '${escapeODataString(args.projectId)}'`
-      : undefined,
-  );
+  if (!args?.projectId) {
+    throw new CalmToolError({
+      code: 'INVALID_ARGUMENT',
+      message: 'projectId is required',
+    });
+  }
+  const limit = clampListLimit(args.limit);
+  const offset = args.offset && args.offset > 0 ? Math.floor(args.offset) : 0;
   let query = ODataQuery.new().top(limit).skip(offset);
-  if (filter) query = query.filter(filter);
-  if (args?.withCount) query = query.count();
+  if (args.withCount) query = query.count();
   try {
-    const collection = await ctx.calm.getTasks().listWorkstreams(query);
+    const collection = await ctx.calm
+      .getTasks()
+      .listWorkstreams(args.projectId, query);
     return toListResponse(collection, { limit, offset });
   } catch (err) {
     throw mapCalmErrorForTool(err);

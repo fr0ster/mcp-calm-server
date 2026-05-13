@@ -1,5 +1,35 @@
 # Changelog
 
+## 0.2.1 — 2026-05-13
+
+Same-day follow-up to 0.2.0: realigns two bonus tools with
+`@mcp-abap-adt/calm-client@0.2.0`, which corrected its
+`listDeliverables` / `listWorkstreams` signatures to require
+`projectId` (see calm-client issue #1 / PR #2).
+
+### Changed (BREAKING for two tool input schemas)
+
+- **`calm_tasks_list_deliverables`** — `projectId` is now `required`
+  in the input schema. The Tasks service exposes this endpoint with
+  `@RequestParam UUID projectId` and rejects calls without it; the
+  previous schema treated `projectId` as optional and emitted it as an
+  OData `$filter`, which the server ignored (sandbox returned 400,
+  live tenant would also 400).
+- **`calm_tasks_list_workstreams`** — same change for symmetry and to
+  match the corrected client API. Sandbox happened to tolerate the
+  missing param and return an empty page, but a real tenant would 400.
+
+### Updated
+
+- Peer dependency `@mcp-abap-adt/calm-client` bumped from `^0.1.0` to
+  `^0.2.0`. Required for the corrected method signatures.
+
+### Tests
+
+- Unit tests for the two affected bonus tools rewritten to assert
+  `INVALID_ARGUMENT` without `projectId` and positional-`projectId`
+  forwarding to the client. 225 passed (was 224), 7 skipped, 1 todo.
+
 ## 0.2.0 — 2026-05-13
 
 Parity with the consetto-Rust port plus a wider bonus surface, live
