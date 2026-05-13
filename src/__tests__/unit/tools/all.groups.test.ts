@@ -37,7 +37,7 @@ describe('ALL_GROUPS aggregation', () => {
     }
   });
 
-  test('total tool count matches M12 target (41)', () => {
-    expect(ALL_HANDLERS).toHaveLength(41);
+  test('total tool count matches M13 target (42) — parity with consetto', () => {
+    expect(ALL_HANDLERS).toHaveLength(42);
   });
 });
