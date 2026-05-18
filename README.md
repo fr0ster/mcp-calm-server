@@ -83,6 +83,51 @@ npm run build && node dist/bin/stdio.js
 The server speaks MCP over stdio. Misconfiguration is reported to
 `stderr` with a non-zero exit code.
 
+## Authentication setup
+
+`calm-mcp` supports two OAuth2 flows for live tenants, selectable via
+`CALM_AUTH_FLOW`:
+
+| Flow | Use case | Browser? | Refresh token? |
+|---|---|---|---|
+| `client_credentials` (default) | technical service-binding (`sb-*` client) | no | no |
+| `authorization_code` | end-user dev workflow, full user scope | once | yes |
+
+### Option A — quick CC setup (technical user)
+
+Plain `.env` with inline `CALM_UAA_URL` / `CALM_UAA_CLIENT_ID` /
+`CALM_UAA_CLIENT_SECRET` works as before — no extra steps. The broker uses
+an in-memory session shim for these inline creds.
+
+### Option B — broker-backed setup (CC or AC)
+
+Use the bundled [`mcp-auth`](https://www.npmjs.com/package/@mcp-abap-adt/auth-broker)
+CLI to convert a BTP service key into a token-bearing `.env`:
+
+```bash
+# CC (no browser)
+npx mcp-auth --service-key ./sk.json --output ./DEFAULT.env \
+             --type xsuaa --credential
+
+# AC (browser pops once; refresh_token persists)
+npx mcp-auth --service-key ./sk.json --output ./DEFAULT.env \
+             --type xsuaa --browser auto
+```
+
+Then in your `.env`:
+
+```
+CALM_MODE=oauth2
+CALM_BASE_URL=https://<tenant>.<region>.alm.cloud.sap
+CALM_AUTH_FLOW=authorization_code   # or client_credentials
+CALM_DESTINATION=DEFAULT
+```
+
+The server's runtime auth pipeline is `@mcp-abap-adt/auth-broker`.
+
+> Note: `buildCalmClient` is async since v0.4.0 (was sync in v0.3.x). Library
+> consumers must `await` it.
+
 ### 3. Wire into Claude Desktop
 
 Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json`
