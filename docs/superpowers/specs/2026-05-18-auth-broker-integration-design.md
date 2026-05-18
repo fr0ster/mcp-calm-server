@@ -133,10 +133,14 @@ src/server/
 ```
 
 `src/server/auth/buildBroker.ts` — основна нова робота:
-- сигнатура: `buildAuthBroker(config: ICalmServerConfig): AuthBroker`
+- сигнатура: `buildAuthBroker(config: ICalmServerConfig, logger?: ILogger): AuthBroker`
 - обирає provider на основі `config.authFlow`
 - обирає session-store: legacy shim якщо є inline UAA, інакше `XsuaaSessionStore(cwd, destination)`
 - повертає сконструйований broker
+- **stdio-safety**: broker-у передається `logger` параметром. У stdio-режимі
+  `bin/stdio.ts` передає існуючий `StderrLogger` з `src/server/stderrLogger.ts`
+  (див. CLAUDE.md "MCP-stdio reserves stdout"). Без явного logger broker мовчить
+  — це безпечний default для library-консумерів.
 
 `src/server/auth/legacyEnvShim.ts` — невелике:
 - сигнатура: `buildLegacyShimStore(config): SafeXsuaaSessionStore | null`
@@ -180,6 +184,18 @@ src/server/
 
 Оновити: замість перевірки `XsuaaRefresher`, перевіряти що `CalmConnection`
 отримує `ITokenRefresher` від мокнутого broker-а.
+
+### Integration tests (existing, env-gated)
+
+`src/__tests__/integration/_sandbox.ts` уже надає `describeOAuth2` gate
+(`CALM_MODE=oauth2 + CALM_BASE_URL + 3× UAA env` — наш поточний `.env` його
+відкриває). Після рефактора ці тести стають acceptance-критерієм:
+
+- `npm test` із live `.env` MUST проходити так само, як до рефактора.
+- Окремих integration-тестів для broker-pipeline не пишемо — наявне покриття
+  через `describeOAuth2` плюс unit-тести на `buildBroker`/`legacyEnvShim` достатнє.
+- Для `ac` flow вручну: запустити `mcp-auth` з service-key, перевірити що
+  той самий integration suite проходить без зміни решти `.env`.
 
 ## Migration / rollout
 
