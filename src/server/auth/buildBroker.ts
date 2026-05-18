@@ -37,19 +37,37 @@ export async function buildAuthBroker(
   const sessionStore: ISessionStore =
     shimStore ?? new XsuaaSessionStore(process.cwd(), config.baseUrl, logger);
 
+  // Resolve UAA credentials: inline config wins, otherwise read from
+  // session store (populated from `./{destination}.env` by `mcp-auth`).
+  const sessionAuth = await sessionStore.getAuthorizationConfig(
+    config.destination,
+  );
+  const uaaUrl = config.uaaUrl || sessionAuth?.uaaUrl;
+  const uaaClientId = config.uaaClientId || sessionAuth?.uaaClientId;
+  const uaaClientSecret =
+    config.uaaClientSecret || sessionAuth?.uaaClientSecret;
+
+  if (!uaaUrl || !uaaClientId || !uaaClientSecret) {
+    throw new Error(
+      `[calm-mcp] UAA credentials missing for destination "${config.destination}". ` +
+        `Either inline CALM_UAA_URL/CALM_UAA_CLIENT_ID/CALM_UAA_CLIENT_SECRET in .env, ` +
+        `or run 'npx mcp-auth --service-key ./sk.json --output ./${config.destination}.env --type xsuaa' first.`,
+    );
+  }
+
   const tokenProvider: ITokenProvider =
     config.authFlow === 'authorization_code'
       ? new AuthorizationCodeProvider({
-          uaaUrl: config.uaaUrl ?? '',
-          clientId: config.uaaClientId ?? '',
-          clientSecret: config.uaaClientSecret ?? '',
+          uaaUrl,
+          clientId: uaaClientId,
+          clientSecret: uaaClientSecret,
           browser: 'none',
           logger,
         })
       : new ClientCredentialsProvider({
-          uaaUrl: config.uaaUrl ?? '',
-          clientId: config.uaaClientId ?? '',
-          clientSecret: config.uaaClientSecret ?? '',
+          uaaUrl,
+          clientId: uaaClientId,
+          clientSecret: uaaClientSecret,
         });
 
   const allowBrowserAuth = config.authFlow !== 'authorization_code';

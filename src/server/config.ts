@@ -80,17 +80,9 @@ export function readConfig(): ICalmServerConfig {
     return {
       mode,
       baseUrl: required('CALM_BASE_URL'),
-      ...(authFlow === 'client_credentials'
-        ? {
-            uaaUrl: required('CALM_UAA_URL'),
-            uaaClientId: required('CALM_UAA_CLIENT_ID'),
-            uaaClientSecret: required('CALM_UAA_CLIENT_SECRET'),
-          }
-        : {
-            uaaUrl: process.env.CALM_UAA_URL,
-            uaaClientId: process.env.CALM_UAA_CLIENT_ID,
-            uaaClientSecret: process.env.CALM_UAA_CLIENT_SECRET,
-          }),
+      uaaUrl: process.env.CALM_UAA_URL,
+      uaaClientId: process.env.CALM_UAA_CLIENT_ID,
+      uaaClientSecret: process.env.CALM_UAA_CLIENT_SECRET,
       timeoutMs,
       authFlow,
       destination,

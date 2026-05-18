@@ -8,7 +8,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const projectRoot = resolve(__dirname, '..');
 dotenvConfig({ path: resolve(projectRoot, '.env') });
 
-const required = ['CALM_MODE', 'CALM_BASE_URL', 'CALM_UAA_URL', 'CALM_UAA_CLIENT_ID', 'CALM_UAA_CLIENT_SECRET'];
+const required = ['CALM_MODE', 'CALM_BASE_URL'];
 const missing = required.filter((k) => !process.env[k]);
 if (missing.length) {
   console.error('[smoke] missing env:', missing.join(', '));

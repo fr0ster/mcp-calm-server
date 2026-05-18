@@ -62,6 +62,14 @@ describe('buildAuthBroker', () => {
   });
 
   test('no inline UAA → file-based XsuaaSessionStore on cwd', async () => {
+    // Simulate DEFAULT.env having UAA creds — broker reads them from store.
+    (XsuaaSessionStore as jest.Mock).mockImplementation(() => ({
+      getAuthorizationConfig: jest.fn().mockResolvedValue({
+        uaaUrl: 'https://uaa.example',
+        uaaClientId: 'cid',
+        uaaClientSecret: 'secret',
+      }),
+    }));
     const noInline = {
       ...baseConfig,
       uaaUrl: undefined,
@@ -75,6 +83,19 @@ describe('buildAuthBroker', () => {
       undefined,
     );
     expect(SafeXsuaaSessionStore).not.toHaveBeenCalled();
+  });
+
+  test('no UAA anywhere (no inline + empty store) → throws with mcp-auth hint', async () => {
+    (XsuaaSessionStore as jest.Mock).mockImplementation(() => ({
+      getAuthorizationConfig: jest.fn().mockResolvedValue(null),
+    }));
+    const noInline = {
+      ...baseConfig,
+      uaaUrl: undefined,
+      uaaClientId: undefined,
+      uaaClientSecret: undefined,
+    };
+    await expect(buildAuthBroker(noInline)).rejects.toThrow(/mcp-auth/);
   });
 
   test('CC flow: allowBrowserAuth=true (broker has hard-gate on no refresh_token)', async () => {
