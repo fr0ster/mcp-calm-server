@@ -7,7 +7,7 @@ describeSandbox('processMonitoring tools (sandbox)', () => {
   // adds it to the sandbox catalog this test will start failing, which
   // is the signal to flip it to a real assertion.
   it.failing('list_processes is unavailable in sandbox (currently 404)', async () => {
-    const res = await listBusinessProcessesTool.handler(ctx(), {
+    const res = await listBusinessProcessesTool.handler(await ctx(), {
       limit: 1,
     });
     expect(Array.isArray(res.rows)).toBe(true);

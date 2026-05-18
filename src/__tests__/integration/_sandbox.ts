@@ -23,10 +23,9 @@ export const PROJECT_ID = process.env.CALM_PROJECT_ID;
 
 const ALLOW_MUTATIONS = process.env.CALM_ALLOW_MUTATIONS === '1';
 
-let cachedCalm: CalmClient | undefined;
-function calm(): CalmClient {
-  if (cachedCalm) return cachedCalm;
-  cachedCalm = buildCalmClient(readConfig());
+let cachedCalm: Promise<CalmClient> | undefined;
+function calm(): Promise<CalmClient> {
+  if (!cachedCalm) cachedCalm = buildCalmClient(readConfig());
   return cachedCalm;
 }
 
@@ -66,7 +65,9 @@ export const describeWithProject =
 export const describeMutating =
   LIVE_ENABLED && PROJECT_ID && ALLOW_MUTATIONS ? describe : describe.skip;
 
-export const ctx = (): { calm: CalmClient } => ({ calm: calm() });
+export const ctx = async (): Promise<{ calm: CalmClient }> => ({
+  calm: await calm(),
+});
 
 export const SANDBOX_NOTE = SANDBOX_ENABLED
   ? `[sandbox enabled, projectId=${PROJECT_ID ?? '<not set>'}]`

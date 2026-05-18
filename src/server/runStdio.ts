@@ -19,7 +19,7 @@ const PACKAGE_VERSION = '0.3.0';
 export async function runStdio(): Promise<void> {
   const logger = new StderrLogger();
   const config = readConfig();
-  const calm = buildCalmClient(config);
+  const calm = await buildCalmClient(config, { logger });
   const server = new BaseCalmMcpServer({
     name: PACKAGE_NAME,
     version: PACKAGE_VERSION,

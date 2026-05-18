@@ -15,7 +15,7 @@ describeMutating('tasks mutation lifecycle (live, opt-in)', () => {
     const stamp = new Date().toISOString();
 
     // CREATE
-    const created = await createTaskTool.handler(ctx(), {
+    const created = await createTaskTool.handler(await ctx(), {
       projectId,
       title: `mcp-calm-server integration test ${stamp}`,
       type: 'requirement',
@@ -26,25 +26,25 @@ describeMutating('tasks mutation lifecycle (live, opt-in)', () => {
 
     try {
       // GET
-      const fetched = await getTaskTool.handler(ctx(), { id });
+      const fetched = await getTaskTool.handler(await ctx(), { id });
       expect(fetched.id).toBe(id);
 
       // UPDATE
-      const updated = await updateTaskTool.handler(ctx(), {
+      const updated = await updateTaskTool.handler(await ctx(), {
         id,
         title: `${fetched.title} (renamed)`,
       });
       expect(updated.title).toMatch(/\(renamed\)$/);
 
       // COMMENT
-      const comment = await createTaskCommentTool.handler(ctx(), {
+      const comment = await createTaskCommentTool.handler(await ctx(), {
         taskId: id,
         content: 'Automated comment from integration test',
       });
       expect(comment).toBeDefined();
     } finally {
       // DELETE (always — keeps the tenant clean even on assert failure)
-      const res = await deleteTaskTool.handler(ctx(), { id });
+      const res = await deleteTaskTool.handler(await ctx(), { id });
       expect(res).toEqual({ deleted: true, id });
     }
   });

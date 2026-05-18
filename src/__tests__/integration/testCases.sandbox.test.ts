@@ -9,13 +9,13 @@ import { ctx, describeSandbox } from './_sandbox';
 
 describeSandbox('testCases tools (sandbox)', () => {
   it('lists test cases', async () => {
-    const res = await listTestCasesTool.handler(ctx(), { limit: 1 });
+    const res = await listTestCasesTool.handler(await ctx(), { limit: 1 });
     expect(Array.isArray(res.items)).toBe(true);
   });
 
   it('rejects get without uuid', async () => {
     await expect(
-      getTestCaseTool.handler(ctx(), {} as never),
+      getTestCaseTool.handler(await ctx(), {} as never),
     ).rejects.toMatchObject({ code: 'INVALID_ARGUMENT' });
   });
 
@@ -27,31 +27,31 @@ describeSandbox('testCases tools (sandbox)', () => {
   describe('CRUD argument validation (no network)', () => {
     it('create rejects missing title', async () => {
       await expect(
-        createTestCaseTool.handler(ctx(), {} as never),
+        createTestCaseTool.handler(await ctx(), {} as never),
       ).rejects.toMatchObject({ code: 'INVALID_ARGUMENT' });
     });
 
     it('update rejects missing uuid', async () => {
       await expect(
-        updateTestCaseTool.handler(ctx(), { title: 'x' } as never),
+        updateTestCaseTool.handler(await ctx(), { title: 'x' } as never),
       ).rejects.toMatchObject({ code: 'INVALID_ARGUMENT' });
     });
 
     it('delete rejects missing uuid', async () => {
       await expect(
-        deleteTestCaseTool.handler(ctx(), {} as never),
+        deleteTestCaseTool.handler(await ctx(), {} as never),
       ).rejects.toMatchObject({ code: 'INVALID_ARGUMENT' });
     });
 
     it('create_activity rejects missing parent_ID', async () => {
       await expect(
-        createTestActivityTool.handler(ctx(), { title: 'A' } as never),
+        createTestActivityTool.handler(await ctx(), { title: 'A' } as never),
       ).rejects.toMatchObject({ code: 'INVALID_ARGUMENT' });
     });
 
     it('create_action rejects missing parent_ID', async () => {
       await expect(
-        createTestActionTool.handler(ctx(), { title: 'A' } as never),
+        createTestActionTool.handler(await ctx(), { title: 'A' } as never),
       ).rejects.toMatchObject({ code: 'INVALID_ARGUMENT' });
     });
   });

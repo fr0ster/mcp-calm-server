@@ -9,9 +9,9 @@ describeSandbox('logs tools (sandbox)', () => {
   it.todo('fetches a log slice for a known sandbox provider');
 
   it('rejects missing provider with INVALID_ARGUMENT', async () => {
-    await expect(getLogsTool.handler(ctx(), {} as never)).rejects.toMatchObject(
-      { code: 'INVALID_ARGUMENT' },
-    );
+    await expect(
+      getLogsTool.handler(await ctx(), {} as never),
+    ).rejects.toMatchObject({ code: 'INVALID_ARGUMENT' });
   });
 
   // calm_logs_post is a write tool — actual ingestion intentionally
@@ -21,19 +21,25 @@ describeSandbox('logs tools (sandbox)', () => {
   describe('post argument validation (no network)', () => {
     it('rejects missing useCase', async () => {
       await expect(
-        postLogsTool.handler(ctx(), { serviceId: 'svc', records: [] } as never),
+        postLogsTool.handler(await ctx(), {
+          serviceId: 'svc',
+          records: [],
+        } as never),
       ).rejects.toMatchObject({ code: 'INVALID_ARGUMENT' });
     });
 
     it('rejects missing serviceId', async () => {
       await expect(
-        postLogsTool.handler(ctx(), { useCase: 'uc', records: [] } as never),
+        postLogsTool.handler(await ctx(), {
+          useCase: 'uc',
+          records: [],
+        } as never),
       ).rejects.toMatchObject({ code: 'INVALID_ARGUMENT' });
     });
 
     it('rejects missing records', async () => {
       await expect(
-        postLogsTool.handler(ctx(), {
+        postLogsTool.handler(await ctx(), {
           useCase: 'uc',
           serviceId: 'svc',
         } as never),
