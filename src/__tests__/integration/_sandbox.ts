@@ -11,12 +11,22 @@ if (existsSync(envPath)) dotenvConfig({ path: envPath });
 const mode = process.env.CALM_MODE?.toLowerCase();
 
 const SANDBOX_ENABLED = mode === 'sandbox' && !!process.env.CALM_API_KEY;
-const OAUTH2_ENABLED =
-  mode === 'oauth2' &&
-  !!process.env.CALM_BASE_URL &&
+
+// OAuth2 gate accepts either inline CALM_UAA_* (legacy shim path) or
+// `./{destination}.env` produced by `mcp-auth` (broker-file path).
+// Mirrors auth resolution in `src/server/auth/buildBroker.ts`.
+const destination = process.env.CALM_DESTINATION || 'DEFAULT';
+const destEnvPath = resolve(process.cwd(), `${destination}.env`);
+const HAS_INLINE_UAA =
   !!process.env.CALM_UAA_URL &&
   !!process.env.CALM_UAA_CLIENT_ID &&
   !!process.env.CALM_UAA_CLIENT_SECRET;
+const HAS_DEST_ENV = existsSync(destEnvPath);
+
+const OAUTH2_ENABLED =
+  mode === 'oauth2' &&
+  !!process.env.CALM_BASE_URL &&
+  (HAS_INLINE_UAA || HAS_DEST_ENV);
 const LIVE_ENABLED = SANDBOX_ENABLED || OAUTH2_ENABLED;
 
 export const PROJECT_ID = process.env.CALM_PROJECT_ID;
