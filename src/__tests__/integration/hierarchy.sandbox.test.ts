@@ -7,13 +7,13 @@ import { ctx, describeSandbox } from './_sandbox';
 
 describeSandbox('hierarchy tools (sandbox)', () => {
   it('lists hierarchy nodes', async () => {
-    const res = await listHierarchyTool.handler(ctx(), { limit: 1 });
+    const res = await listHierarchyTool.handler(await ctx(), { limit: 1 });
     expect(Array.isArray(res.items)).toBe(true);
   });
 
   it('getWithChildren rejects missing uuid', async () => {
     await expect(
-      getHierarchyWithChildrenTool.handler(ctx(), {} as never),
+      getHierarchyWithChildrenTool.handler(await ctx(), {} as never),
     ).rejects.toMatchObject({ code: 'INVALID_ARGUMENT' });
   });
 
@@ -23,19 +23,19 @@ describeSandbox('hierarchy tools (sandbox)', () => {
   describe('CRUD argument validation (no network)', () => {
     it('create_node rejects missing title', async () => {
       await expect(
-        createHierarchyNodeTool.handler(ctx(), {} as never),
+        createHierarchyNodeTool.handler(await ctx(), {} as never),
       ).rejects.toMatchObject({ code: 'INVALID_ARGUMENT' });
     });
 
     it('update_node rejects missing uuid', async () => {
       await expect(
-        updateHierarchyNodeTool.handler(ctx(), { title: 'x' } as never),
+        updateHierarchyNodeTool.handler(await ctx(), { title: 'x' } as never),
       ).rejects.toMatchObject({ code: 'INVALID_ARGUMENT' });
     });
 
     it('delete_node rejects missing uuid', async () => {
       await expect(
-        deleteHierarchyNodeTool.handler(ctx(), {} as never),
+        deleteHierarchyNodeTool.handler(await ctx(), {} as never),
       ).rejects.toMatchObject({ code: 'INVALID_ARGUMENT' });
     });
   });

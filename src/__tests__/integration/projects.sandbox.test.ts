@@ -10,7 +10,7 @@ describeSandbox('projects tools (sandbox)', () => {
   let list: IListResponse<Record<string, unknown>>;
 
   beforeAll(async () => {
-    list = (await listProjectsTool.handler(ctx(), {
+    list = (await listProjectsTool.handler(await ctx(), {
       limit: 1,
     })) as IListResponse<Record<string, unknown>>;
   });
@@ -23,7 +23,7 @@ describeSandbox('projects tools (sandbox)', () => {
     if (list.items.length === 0) return;
     const id = (list.items[0] as { id?: string }).id;
     if (!id) return;
-    const res = await getProjectTool.handler(ctx(), { id });
+    const res = await getProjectTool.handler(await ctx(), { id });
     expect(res).toHaveProperty('id', id);
   });
 
@@ -32,7 +32,7 @@ describeSandbox('projects tools (sandbox)', () => {
   // sandbox tenant.
   it('create rejects missing name', async () => {
     await expect(
-      createProjectTool.handler(ctx(), {} as never),
+      createProjectTool.handler(await ctx(), {} as never),
     ).rejects.toMatchObject({ code: 'INVALID_ARGUMENT' });
   });
 });

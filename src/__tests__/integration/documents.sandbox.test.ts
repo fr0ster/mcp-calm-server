@@ -7,16 +7,16 @@ import { ctx, describeSandbox } from './_sandbox';
 
 describeSandbox('documents tools (sandbox)', () => {
   it('lists documents (possibly empty in shared sandbox)', async () => {
-    const res = await listDocumentsTool.handler(ctx(), { limit: 3 });
+    const res = await listDocumentsTool.handler(await ctx(), { limit: 3 });
     expect(Array.isArray(res.items)).toBe(true);
   });
 
   it('chains list → get when documents exist', async () => {
-    const list = await listDocumentsTool.handler(ctx(), { limit: 1 });
+    const list = await listDocumentsTool.handler(await ctx(), { limit: 1 });
     if (list.items.length === 0) return;
     const uuid = (list.items[0] as { uuid?: string }).uuid;
     if (!uuid) return;
-    const res = await getDocumentTool.handler(ctx(), { uuid });
+    const res = await getDocumentTool.handler(await ctx(), { uuid });
     expect(res).toHaveProperty('uuid', uuid);
   });
 
@@ -26,19 +26,19 @@ describeSandbox('documents tools (sandbox)', () => {
   describe('CRUD argument validation (no network)', () => {
     it('create rejects missing title', async () => {
       await expect(
-        createDocumentTool.handler(ctx(), {} as never),
+        createDocumentTool.handler(await ctx(), {} as never),
       ).rejects.toMatchObject({ code: 'INVALID_ARGUMENT' });
     });
 
     it('update rejects missing uuid', async () => {
       await expect(
-        updateDocumentTool.handler(ctx(), { title: 'x' } as never),
+        updateDocumentTool.handler(await ctx(), { title: 'x' } as never),
       ).rejects.toMatchObject({ code: 'INVALID_ARGUMENT' });
     });
 
     it('delete rejects missing uuid', async () => {
       await expect(
-        deleteDocumentTool.handler(ctx(), {} as never),
+        deleteDocumentTool.handler(await ctx(), {} as never),
       ).rejects.toMatchObject({ code: 'INVALID_ARGUMENT' });
     });
   });

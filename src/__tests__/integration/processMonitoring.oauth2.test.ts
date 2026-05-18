@@ -6,7 +6,9 @@ describeOAuth2('processMonitoring tools (live OAuth2 tenant)', () => {
   // (covered by an `it.failing` guard in the sibling sandbox file).
   // A real Cloud ALM tenant exposes it — this is where coverage lives.
   it('list_processes returns rows[]', async () => {
-    const res = await listBusinessProcessesTool.handler(ctx(), { limit: 1 });
+    const res = await listBusinessProcessesTool.handler(await ctx(), {
+      limit: 1,
+    });
     expect(Array.isArray(res.rows)).toBe(true);
   });
 });

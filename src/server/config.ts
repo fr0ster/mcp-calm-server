@@ -22,6 +22,7 @@ export function loadEnv(): void {
 }
 
 export type CalmServerMode = 'oauth2' | 'sandbox';
+export type CalmAuthFlow = 'client_credentials' | 'authorization_code';
 
 export interface ICalmServerConfig {
   mode: CalmServerMode;
@@ -31,6 +32,8 @@ export interface ICalmServerConfig {
   uaaClientSecret?: string;
   apiKey?: string;
   timeoutMs: number;
+  authFlow: CalmAuthFlow;
+  destination: string;
 }
 
 function required(name: string): string {
@@ -53,6 +56,22 @@ export function readConfig(): ICalmServerConfig {
       '[calm-mcp] CALM_MODE is required (oauth2 or sandbox). See .env.example.',
     );
   }
+  const rawAuthFlow = process.env.CALM_AUTH_FLOW;
+  let authFlow: CalmAuthFlow = 'client_credentials';
+  if (rawAuthFlow) {
+    if (
+      rawAuthFlow === 'client_credentials' ||
+      rawAuthFlow === 'authorization_code'
+    ) {
+      authFlow = rawAuthFlow;
+    } else {
+      throw new Error(
+        `[calm-mcp] CALM_AUTH_FLOW must be 'client_credentials' or 'authorization_code', got "${rawAuthFlow}".`,
+      );
+    }
+  }
+  const destination = process.env.CALM_DESTINATION || 'DEFAULT';
+
   const timeoutMs = process.env.CALM_TIMEOUT
     ? Number(process.env.CALM_TIMEOUT)
     : 30_000;
@@ -61,10 +80,12 @@ export function readConfig(): ICalmServerConfig {
     return {
       mode,
       baseUrl: required('CALM_BASE_URL'),
-      uaaUrl: required('CALM_UAA_URL'),
-      uaaClientId: required('CALM_UAA_CLIENT_ID'),
-      uaaClientSecret: required('CALM_UAA_CLIENT_SECRET'),
+      uaaUrl: process.env.CALM_UAA_URL,
+      uaaClientId: process.env.CALM_UAA_CLIENT_ID,
+      uaaClientSecret: process.env.CALM_UAA_CLIENT_SECRET,
       timeoutMs,
+      authFlow,
+      destination,
     };
   }
   if (mode === 'sandbox') {
@@ -74,6 +95,8 @@ export function readConfig(): ICalmServerConfig {
         process.env.CALM_BASE_URL || 'https://sandbox.api.sap.com/SAPCALM',
       apiKey: required('CALM_API_KEY'),
       timeoutMs,
+      authFlow,
+      destination,
     };
   }
   throw new Error(`[calm-mcp] unknown CALM_MODE "${mode}"`);
