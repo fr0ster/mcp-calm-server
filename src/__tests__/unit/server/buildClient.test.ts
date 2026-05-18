@@ -8,6 +8,8 @@ describe('buildCalmClient', () => {
       baseUrl: 'https://sandbox.api.sap.com/SAPCALM',
       apiKey: 'sk',
       timeoutMs: 30_000,
+      authFlow: 'client_credentials',
+      destination: 'DEFAULT',
     });
     expect(client).toBeInstanceOf(CalmClient);
     expect(typeof client.getFeatures).toBe('function');
@@ -21,6 +23,8 @@ describe('buildCalmClient', () => {
       uaaClientId: 'cid',
       uaaClientSecret: 'secret',
       timeoutMs: 30_000,
+      authFlow: 'client_credentials',
+      destination: 'DEFAULT',
     });
     expect(client).toBeInstanceOf(CalmClient);
     expect(typeof client.getTasks).toBe('function');
@@ -32,6 +36,8 @@ describe('buildCalmClient', () => {
       baseUrl: 'https://x',
       apiKey: 'sk',
       timeoutMs: 30_000,
+      authFlow: 'client_credentials',
+      destination: 'DEFAULT',
     });
     expect(client.getFeatures()).toBeDefined();
     expect(client.getDocuments()).toBeDefined();

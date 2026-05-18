@@ -99,4 +99,55 @@ describe('readConfig', () => {
     process.env.CALM_MODE = 'weird';
     expect(() => readConfig()).toThrow();
   });
+
+  test('default authFlow is client_credentials', () => {
+    for (const k of Object.keys(process.env)) {
+      if (k.startsWith('CALM_')) delete process.env[k];
+    }
+    process.env.CALM_MODE = 'oauth2';
+    process.env.CALM_BASE_URL = 'https://t.eu10.alm.cloud.sap';
+    process.env.CALM_UAA_URL = 'https://uaa.example';
+    process.env.CALM_UAA_CLIENT_ID = 'cid';
+    process.env.CALM_UAA_CLIENT_SECRET = 'secret';
+    expect(readConfig().authFlow).toBe('client_credentials');
+  });
+
+  test('CALM_AUTH_FLOW=authorization_code parsed', () => {
+    for (const k of Object.keys(process.env)) {
+      if (k.startsWith('CALM_')) delete process.env[k];
+    }
+    process.env.CALM_MODE = 'oauth2';
+    process.env.CALM_BASE_URL = 'https://t.eu10.alm.cloud.sap';
+    process.env.CALM_AUTH_FLOW = 'authorization_code';
+    expect(readConfig().authFlow).toBe('authorization_code');
+  });
+
+  test('CALM_AUTH_FLOW unknown value throws', () => {
+    for (const k of Object.keys(process.env)) {
+      if (k.startsWith('CALM_')) delete process.env[k];
+    }
+    process.env.CALM_MODE = 'oauth2';
+    process.env.CALM_BASE_URL = 'https://t.eu10.alm.cloud.sap';
+    process.env.CALM_AUTH_FLOW = 'weird';
+    expect(() => readConfig()).toThrow(/CALM_AUTH_FLOW/);
+  });
+
+  test('default destination is DEFAULT', () => {
+    for (const k of Object.keys(process.env)) {
+      if (k.startsWith('CALM_')) delete process.env[k];
+    }
+    process.env.CALM_MODE = 'sandbox';
+    process.env.CALM_API_KEY = 'sk';
+    expect(readConfig().destination).toBe('DEFAULT');
+  });
+
+  test('CALM_DESTINATION overrides default', () => {
+    for (const k of Object.keys(process.env)) {
+      if (k.startsWith('CALM_')) delete process.env[k];
+    }
+    process.env.CALM_MODE = 'sandbox';
+    process.env.CALM_API_KEY = 'sk';
+    process.env.CALM_DESTINATION = 'PROD';
+    expect(readConfig().destination).toBe('PROD');
+  });
 });
