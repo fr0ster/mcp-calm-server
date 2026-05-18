@@ -1,3 +1,5 @@
+jest.mock('dotenv', () => ({ config: jest.fn() }));
+
 import { readConfig } from '../../../server/config';
 
 const ORIGINAL_ENV = { ...process.env };
