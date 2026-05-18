@@ -55,7 +55,9 @@ describe('buildAuthBroker', () => {
 
   test('inline CALM_UAA_* uses SafeXsuaaSessionStore (legacy shim)', async () => {
     await buildAuthBroker({ ...baseConfig });
-    expect(SafeXsuaaSessionStore).toHaveBeenCalledWith('https://t.eu10.alm.cloud.sap');
+    expect(SafeXsuaaSessionStore).toHaveBeenCalledWith(
+      'https://t.eu10.alm.cloud.sap',
+    );
     expect(XsuaaSessionStore).not.toHaveBeenCalled();
   });
 
@@ -85,7 +87,12 @@ describe('buildAuthBroker', () => {
   });
 
   test('passes logger through to AuthBroker constructor', async () => {
-    const logger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() };
+    const logger = {
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+      debug: jest.fn(),
+    };
     await buildAuthBroker({ ...baseConfig }, logger as any);
     expect(AuthBroker).toHaveBeenCalledWith(expect.anything(), 'none', logger);
   });

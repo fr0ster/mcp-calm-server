@@ -59,7 +59,10 @@ export function readConfig(): ICalmServerConfig {
   const rawAuthFlow = process.env.CALM_AUTH_FLOW;
   let authFlow: CalmAuthFlow = 'client_credentials';
   if (rawAuthFlow) {
-    if (rawAuthFlow === 'client_credentials' || rawAuthFlow === 'authorization_code') {
+    if (
+      rawAuthFlow === 'client_credentials' ||
+      rawAuthFlow === 'authorization_code'
+    ) {
       authFlow = rawAuthFlow;
     } else {
       throw new Error(
