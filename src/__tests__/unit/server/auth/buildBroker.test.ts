@@ -77,8 +77,17 @@ describe('buildAuthBroker', () => {
     expect(SafeXsuaaSessionStore).not.toHaveBeenCalled();
   });
 
-  test('AuthBroker is constructed with allowBrowserAuth=false', async () => {
-    await buildAuthBroker({ ...baseConfig });
+  test('CC flow: allowBrowserAuth=true (broker has hard-gate on no refresh_token)', async () => {
+    await buildAuthBroker({ ...baseConfig, authFlow: 'client_credentials' });
+    expect(AuthBroker).toHaveBeenCalledWith(
+      expect.objectContaining({ allowBrowserAuth: true }),
+      'none',
+      undefined,
+    );
+  });
+
+  test('AC flow: allowBrowserAuth=false (fail fast on missing refresh_token)', async () => {
+    await buildAuthBroker({ ...baseConfig, authFlow: 'authorization_code' });
     expect(AuthBroker).toHaveBeenCalledWith(
       expect.objectContaining({ allowBrowserAuth: false }),
       'none',
