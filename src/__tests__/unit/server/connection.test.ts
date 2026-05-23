@@ -1,5 +1,8 @@
 import { CalmApiError } from '@mcp-abap-adt/calm-client';
+import type { ITokenRefresher } from '@mcp-abap-adt/interfaces';
 import { AbstractCalmConnection } from '../../../server/connection/AbstractCalmConnection';
+import { OAuth2CalmConnection } from '../../../server/connection/OAuth2CalmConnection';
+import { SandboxCalmConnection } from '../../../server/connection/SandboxCalmConnection';
 
 // Concrete test double exposing protected hooks with a no-auth header.
 class TestConn extends AbstractCalmConnection {
@@ -82,5 +85,101 @@ describe('AbstractCalmConnection (fetch)', () => {
     expect(url).toContain('?');
     expect(url).toContain('%24top=1');
     expect(url).toContain('projectId=abc');
+  });
+});
+
+describe('SandboxCalmConnection', () => {
+  afterEach(() => jest.restoreAllMocks());
+  it('sends the APIKey header', async () => {
+    const spy = jest
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(JSON.stringify({ value: [] }), { status: 200 }));
+    const conn = new SandboxCalmConnection({
+      baseUrl: 'https://sandbox.api.sap.com/SAPCALM',
+      apiKey: 'KEY123',
+    });
+    await conn.makeRequest({ service: 'features', url: '/Features', method: 'GET' });
+    expect((spy.mock.calls[0][1] as RequestInit).headers).toMatchObject({
+      APIKey: 'KEY123',
+    });
+  });
+});
+
+describe('OAuth2CalmConnection', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  const refresher = (token = 'tok'): ITokenRefresher & { refreshes: number } => {
+    const r = {
+      refreshes: 0,
+      async getToken() {
+        return token;
+      },
+      async refreshToken() {
+        this.refreshes += 1;
+        return `${token}-r${this.refreshes}`;
+      },
+    };
+    return r;
+  };
+
+  it('sends a Bearer token from the refresher', async () => {
+    const spy = jest
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(JSON.stringify({ value: [] }), { status: 200 }));
+    const conn = new OAuth2CalmConnection({
+      baseUrl: 'https://t.alm.cloud.sap/api',
+      tokenRefresher: refresher('abc'),
+    });
+    await conn.makeRequest({ service: 'tasks', url: '/tasks', method: 'GET' });
+    expect((spy.mock.calls[0][1] as RequestInit).headers).toMatchObject({
+      Authorization: 'Bearer abc',
+    });
+  });
+
+  it('refreshes once and retries on a 401', async () => {
+    const r = refresher('abc');
+    const spy = jest
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response('nope', { status: 401 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ value: [] }), { status: 200 }));
+    const conn = new OAuth2CalmConnection({
+      baseUrl: 'https://t.alm.cloud.sap/api',
+      tokenRefresher: r,
+    });
+    const res = await conn.makeRequest({ service: 'tasks', url: '/tasks', method: 'GET' });
+    expect(res.status).toBe(200);
+    expect(r.refreshes).toBe(1);
+    expect(spy).toHaveBeenCalledTimes(2);
+  });
+
+  it('propagates a non-auth 404 as CalmApiError without retry', async () => {
+    const r = refresher('abc');
+    jest
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response('gone', { status: 404 }));
+    const conn = new OAuth2CalmConnection({
+      baseUrl: 'https://t.alm.cloud.sap/api',
+      tokenRefresher: r,
+    });
+    await expect(
+      conn.makeRequest({ service: 'tasks', url: '/tasks', method: 'GET' }),
+    ).rejects.toMatchObject({ code: 'HTTP_ERROR', status: 404 });
+    expect(r.refreshes).toBe(0);
+  });
+
+  it('normalizes a network failure ON THE RETRY into CalmApiError(NETWORK)', async () => {
+    const r = refresher('abc');
+    jest
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response('nope', { status: 401 }))
+      .mockRejectedValueOnce(new TypeError('socket hang up'));
+    const conn = new OAuth2CalmConnection({
+      baseUrl: 'https://t.alm.cloud.sap/api',
+      tokenRefresher: r,
+    });
+    await expect(
+      conn.makeRequest({ service: 'tasks', url: '/tasks', method: 'GET' }),
+    ).rejects.toMatchObject({ name: 'CalmApiError', code: 'NETWORK' });
+    expect(r.refreshes).toBe(1);
   });
 });
