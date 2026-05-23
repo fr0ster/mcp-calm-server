@@ -1,7 +1,8 @@
-import { CalmClient, CalmConnection } from '@mcp-abap-adt/calm-client';
+import { CalmClient } from '@mcp-abap-adt/calm-client';
 import type { ILogger } from '@mcp-abap-adt/interfaces';
 import { buildAuthBroker } from './auth/buildBroker';
 import type { ICalmServerConfig } from './config';
+import { createCalmConnection } from './connection/createCalmConnection';
 
 export interface BuildCalmClientOptions {
   logger?: ILogger;
@@ -10,10 +11,15 @@ export interface BuildCalmClientOptions {
 /**
  * Build a ready-to-use `CalmClient` from a `ICalmServerConfig`.
  *
- * - `oauth2` mode: delegates token acquisition to `@mcp-abap-adt/auth-broker`.
- *   Pass `options.logger` (e.g. `StderrLogger` from `src/server/stderrLogger.ts`)
- *   when running in stdio mode so broker logs do NOT collide with the
- *   MCP JSON-RPC frames on stdout.
+ * Connection construction (fetch transport, verbatim base URL, request
+ * logging) lives in `./connection`. Token acquisition is delegated:
+ *
+ * - `oauth2` mode: `@mcp-abap-adt/auth-broker` produces the
+ *   `ITokenRefresher` (honouring `CALM_AUTH_FLOW` + session stores);
+ *   it is injected into the connection via the factory's
+ *   `tokenRefresher` override. Pass `options.logger` (e.g.
+ *   `StderrLogger`) in stdio mode so broker + connection logs go to
+ *   stderr, never the MCP stdout frame stream.
  * - `sandbox` mode: direct API-key auth, no broker involved.
  */
 export async function buildCalmClient(
@@ -22,18 +28,15 @@ export async function buildCalmClient(
 ): Promise<CalmClient> {
   if (config.mode === 'oauth2') {
     const broker = await buildAuthBroker(config, options.logger);
-    const refresher = broker.createTokenRefresher(config.destination);
-    const connection = new CalmConnection({
-      baseUrl: config.baseUrl,
-      tokenRefresher: refresher,
-      defaultTimeout: config.timeoutMs,
-    });
-    return new CalmClient(connection);
+    const tokenRefresher = broker.createTokenRefresher(config.destination);
+    return new CalmClient(
+      createCalmConnection(config, {
+        tokenRefresher,
+        logger: options.logger,
+      }),
+    );
   }
-  const connection = new CalmConnection({
-    baseUrl: config.baseUrl,
-    apiKey: config.apiKey as string,
-    defaultTimeout: config.timeoutMs,
-  });
-  return new CalmClient(connection);
+  return new CalmClient(
+    createCalmConnection(config, { logger: options.logger }),
+  );
 }

@@ -42,6 +42,22 @@ to stdout silently corrupts every protocol call.
 - The `StderrLogger.test.ts` includes a guard that fails if anything
   ever hits stdout. Keep it green.
 
+## Critical pitfall: CALM_BASE_URL is consumed verbatim
+
+The connection layer (`src/server/connection/`) appends service routes
+to `CALM_BASE_URL` by plain concatenation — it does **not** inject
+`/api`. A tenant service-key's `endpoints.Api` already includes `/api`
+(e.g. `https://eu10-004.alm.cloud.sap/api`); copy it 1:1 into
+`CALM_BASE_URL`. Sandbox uses `https://sandbox.api.sap.com/SAPCALM` as
+before. A bare host (no `/api`) in OAuth2 mode yields 404 on every call.
+
+Connection construction lives in `src/server/connection/` (factory
+`createCalmConnection`), not in `@mcp-abap-adt/calm-client` — the client
+ships only the API surface and depends on the `ICalmConnection`
+interface. Tokens come from `@mcp-abap-adt/auth-broker` (see
+`auth/buildBroker.ts`), injected into the connection as an
+`ITokenRefresher`.
+
 ## Critical pitfall: parts of SAP Cloud ALM are NOT OData
 
 Several endpoints look like OData (return `IODataCollection<T>`) but
