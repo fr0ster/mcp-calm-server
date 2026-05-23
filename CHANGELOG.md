@@ -1,5 +1,39 @@
 # Changelog
 
+## 0.4.0 — 2026-05-23
+
+Follows `@mcp-abap-adt/calm-client@0.4.0` (connection moved out of the
+client).
+
+### Changed (BREAKING)
+
+- **The server now owns the CALM connection.** New `src/server/connection/`
+  module: `AbstractCalmConnection` (native `fetch` transport),
+  `SandboxCalmConnection` (api-key), `OAuth2CalmConnection` (XSUAA via
+  `ITokenRefresher`, one-shot refresh+retry on 401/403), `XsuaaRefresher`,
+  and the `createCalmConnection(config, overrides?)` factory. Exposed via
+  the `./connection` subpath export for embedders.
+- **`CALM_BASE_URL` is consumed verbatim** — the connection appends
+  service routes by plain concatenation and no longer injects `/api`.
+  Paste `endpoints.Api` from the service-key as-is (it already includes
+  `/api`, e.g. `https://<tenant>.<region>.alm.cloud.sap/api`). Sandbox
+  stays `https://sandbox.api.sap.com/SAPCALM`. This fixes the silent
+  double-`/api` 404 against live tenants.
+- **Peer dependency** bumped to `@mcp-abap-adt/calm-client@^0.4.0`.
+
+### Added
+
+- Request-lifecycle logging in the connection via an optional `ILogger`
+  (debug on request/response/retry, warn on transport failure), threaded
+  from `runStdio` through the stderr-safe `StderrLogger`.
+- `tokenRefresher` override on `createCalmConnection` for consumers that
+  run `@mcp-abap-adt/auth-broker`.
+
+### Fixed
+
+- `dotenv` moved from `devDependencies` to `dependencies` (it is imported
+  at runtime by `config.ts`).
+
 ## 0.3.0 — 2026-05-13
 
 Follows `@mcp-abap-adt/calm-client@0.3.0` (issue / PR #3 / #4 there).
