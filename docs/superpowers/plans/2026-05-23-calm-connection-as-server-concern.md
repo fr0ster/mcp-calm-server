@@ -1195,10 +1195,14 @@ export function buildCalmClient(config: ICalmServerConfig): CalmClient {
 }
 ```
 
-- [ ] **Step 2: Confirm no lingering imports of the old client `CalmConnection`**
+- [ ] **Step 2: Confirm no lingering imports of the old client `CalmConnection` class**
 
-Run: `grep -rn "CalmConnection" src/ | grep -v "src/server/connection/"`
-Expected: empty (no references to the removed client class anywhere except the new server connection dir).
+Run: `rg -n "\bCalmConnection\b" src --glob '!src/server/connection/**'`
+Expected: empty. Use a **word-boundary** match for the exact class name
+`CalmConnection` — a plain substring grep would false-positive on
+`createCalmConnection`, `ICalmConnection`, and the doc comments in
+`buildClient.ts`. The class `CalmConnection` (from calm-client) must
+have zero remaining references.
 
 - [ ] **Step 3: Build + full unit suite**
 
@@ -1308,8 +1312,16 @@ Therefore add two independent guards. First, a deterministic
 URL-formation assertion that does **not** depend on the live response
 (it directly catches the double-/api or missing-/api regression):
 
+Note the existing harness: `ctx` and `describeOAuth2` are imported
+from `./_sandbox`; `ctx` is a **function** (`ctx()` builds the handler
+context); the tool handler signature is `handler(ctx, args)` — i.e.
+`listBusinessProcessesTool.handler(ctx(), { limit: 1 })`. The tool
+maps client errors through `mapCalmErrorForTool`, so a 403/404 surfaces
+as a **`CalmToolError`** (with a `.status` field), **not** a
+`CalmApiError`. Assert accordingly.
+
 ```ts
-import { CalmApiError } from '@mcp-abap-adt/calm-client';
+import { CalmToolError } from '../../utils/errorMapping';
 import { createCalmConnection } from '../../server/connection/createCalmConnection';
 import { readConfig } from '../../server/config';
 
@@ -1331,25 +1343,26 @@ Second, the operational-reality assertion for the actual call:
 ```ts
 it('reaches the tenant; succeeds or is scope/deploy-gated (403|404)', async () => {
   try {
-    const res = await listBusinessProcessesTool.handler(
-      { limit: 1, offset: 0 },
-      ctx,
-    );
-    expect(res).toBeDefined();
+    const res = await listBusinessProcessesTool.handler(ctx(), {
+      limit: 1,
+      offset: 0,
+    });
+    expect(Array.isArray(res.rows)).toBe(true);
   } catch (err) {
     // Correct URL, but tenant withholds scope (403) or module not
-    // deployed (404). Both acceptable; anything else is a regression.
-    expect(err).toBeInstanceOf(CalmApiError);
-    expect([403, 404]).toContain((err as CalmApiError).status);
+    // deployed (404). The tool re-maps CalmApiError → CalmToolError.
+    // Both statuses acceptable; anything else is a regression.
+    expect(err).toBeInstanceOf(CalmToolError);
+    expect([403, 404]).toContain((err as CalmToolError).status);
   }
 });
 ```
 
 The first test makes the 404 in the second test safe to accept: the
 URL is already proven well-formed, so a 404 can only mean "module not
-deployed", never "wrong base URL". (Adjust the tool/handler import,
-`ctx` construction, and the `describeOAuth2` gate to match the file's
-existing setup — read the file first and reuse its harness.)
+deployed", never "wrong base URL". (Reuse the file's existing
+`ctx`/`describeOAuth2` imports from `./_sandbox`; do not re-invent the
+harness.)
 
 - [ ] **Step 4: Build + unit test gate (integration stays gated/skipped without secrets)**
 
