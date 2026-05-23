@@ -369,7 +369,7 @@ Tell the user: "calm-client `v0.4.0` tagged and ready. Run `npm publish` when re
 
 All Part B steps run with cwd `/home/okyslytsia/prj/mcp-calm-server`.
 
-**Local linking for development before calm-client@0.4.0 is on the registry:** use a `file:` install so Part B can build against the new client.
+**Local linking for development before calm-client@0.4.0 is on the registry:** use `npm link` so the local 0.4.0 build is resolvable **without touching `package.json` or `package-lock.json`**. Never commit a `file:../mcp-calm-client` path — it leaks a machine-local path into release metadata.
 
 ## Task B0: Branch + link new client
 
@@ -380,12 +380,16 @@ cd /home/okyslytsia/prj/mcp-calm-server
 git checkout -b feat/own-connection
 ```
 
-- [ ] **Step 2: Point the peer/dev install at the local client build**
+- [ ] **Step 2: Link the local client build (no manifest changes)**
 
 ```bash
-npm install --save-dev "@mcp-abap-adt/calm-client@file:../mcp-calm-client"
+npm --prefix ../mcp-calm-client run build      # ensure 0.4.0 dist is fresh
+npm --prefix ../mcp-calm-client link           # register the local package globally
+npm link @mcp-abap-adt/calm-client             # symlink it into this repo's node_modules
 ```
-(This is a temporary dev convenience; the published `peerDependencies` range is set in Task B7. Verify `node_modules/@mcp-abap-adt/calm-client/dist` reflects the 0.4.0 build — rebuild the client repo if needed with `npm --prefix ../mcp-calm-client run build`.)
+`npm link` creates a symlink in `node_modules` and does **not** modify
+`package.json`/`package-lock.json`. Confirm `git status` shows no
+change to either manifest after linking.
 
 - [ ] **Step 3: Confirm the new client surface is present**
 
@@ -641,16 +645,26 @@ export abstract class AbstractCalmConnection implements ICalmConnection {
     try {
       return await this.execute<T, D>(url, options);
     } catch (err) {
-      if (err instanceof CalmApiError && err.status !== undefined) {
-        const retry = await this.onAuthFailure(err.status);
-        if (retry) return this.execute<T, D>(url, options);
+      const status = err instanceof CalmApiError ? err.status : undefined;
+      if (status !== undefined && (await this.onAuthFailure(status))) {
+        // Retry once. The retry's own errors (network, abort, HTTP) go
+        // through the same normalization — never escape as a raw error.
+        try {
+          return await this.execute<T, D>(url, options);
+        } catch (retryErr) {
+          throw this.normalizeError(retryErr);
+        }
       }
-      if (err instanceof CalmApiError) throw err;
-      throw CalmApiError.fromNetwork(
-        err,
-        err instanceof Error ? err.message : String(err),
-      );
+      throw this.normalizeError(err);
     }
+  }
+
+  private normalizeError(err: unknown): CalmApiError {
+    if (err instanceof CalmApiError) return err;
+    return CalmApiError.fromNetwork(
+      err,
+      err instanceof Error ? err.message : String(err),
+    );
   }
 
   private async execute<T, D>(
@@ -810,6 +824,22 @@ describe('OAuth2CalmConnection', () => {
       conn.makeRequest({ service: 'tasks', url: '/tasks', method: 'GET' }),
     ).rejects.toMatchObject({ code: 'HTTP_ERROR', status: 404 });
     expect(r.refreshes).toBe(0);
+  });
+
+  it('normalizes a network failure ON THE RETRY into CalmApiError(NETWORK)', async () => {
+    const r = refresher('abc');
+    jest
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response('nope', { status: 401 }))
+      .mockRejectedValueOnce(new TypeError('socket hang up'));
+    const conn = new OAuth2CalmConnection({
+      baseUrl: 'https://t.alm.cloud.sap/api',
+      tokenRefresher: r,
+    });
+    await expect(
+      conn.makeRequest({ service: 'tasks', url: '/tasks', method: 'GET' }),
+    ).rejects.toMatchObject({ name: 'CalmApiError', code: 'NETWORK' });
+    expect(r.refreshes).toBe(1);
   });
 });
 ```
@@ -1209,14 +1239,16 @@ git commit -m "refactor(server): buildClient delegates to createCalmConnection f
 }
 ```
 
-- [ ] **Step 2: Clean install + build + test**
+- [ ] **Step 2: Build + test against the linked client**
 
 ```bash
-rm -rf node_modules package-lock.json
-npm install --save-dev "@mcp-abap-adt/calm-client@file:../mcp-calm-client"
 npm run build && npm test
 ```
-Expected: build PASS, unit tests PASS. (Before publish, the `file:` dev install is swapped for the registry `^0.4.0` — see Task B9.)
+Expected: build PASS, unit tests PASS. The linked client (Task B0,
+`npm link`) supplies the 0.4.0 surface; `package.json` references only
+the registry range `^0.4.0`. Do **not** `rm -rf node_modules` here — it
+would drop the symlink; if you must reinstall, re-run the `npm link`
+step from B0 afterward.
 
 - [ ] **Step 3: Verify the `./connection` subpath resolves**
 
@@ -1264,29 +1296,60 @@ before. Putting a bare host (no `/api`) in OAuth2 mode yields 404 on
 every call.
 ```
 
-- [ ] **Step 3: Loosen the live-tenant processMonitoring expectation**
+- [ ] **Step 3: Loosen the live-tenant processMonitoring expectation — but guard URL formation explicitly**
 
-Open `src/__tests__/integration/processMonitoring.oauth2.test.ts`. The current test expects a successful `rows[]`. Change it to assert that the call either succeeds OR fails with a 403/404 (operational reality: this client may lack the scope or the tenant may not deploy the module), while still proving the URL is correctly formed (a malformed URL would surface as a different error). Replace the assertion block with:
+Open `src/__tests__/integration/processMonitoring.oauth2.test.ts`. The
+current test expects a successful `rows[]`. A naive "accept 403|404"
+change is **insufficient** — a bare-host regression (`CALM_BASE_URL`
+without `/api`) also yields 404, so the loosened test would pass for
+the exact bug it guards.
+
+Therefore add two independent guards. First, a deterministic
+URL-formation assertion that does **not** depend on the live response
+(it directly catches the double-/api or missing-/api regression):
 
 ```ts
 import { CalmApiError } from '@mcp-abap-adt/calm-client';
+import { createCalmConnection } from '../../server/connection/createCalmConnection';
+import { readConfig } from '../../server/config';
 
-// ... within the existing describeOAuth2 test:
-try {
-  const res = await listBusinessProcessesTool.handler(
-    { limit: 1, offset: 0 },
-    ctx,
+// ... inside the describeOAuth2 block:
+
+it('forms the processMonitoring URL exactly once with /api', async () => {
+  const conn = createCalmConnection(readConfig());
+  const url = await conn.getServiceUrl('processMonitoring');
+  // Exactly one /api, correct service route, no doubling.
+  expect(url).toMatch(
+    /^https:\/\/[^/]+\/api\/calm-processmonitoring\/v1$/,
   );
-  expect(res).toBeDefined();
-} catch (err) {
-  // Correct URL, but tenant withholds scope (403) or module not
-  // deployed (404). Both are acceptable; anything else is a regression.
-  expect(err).toBeInstanceOf(CalmApiError);
-  expect([403, 404]).toContain((err as CalmApiError).status);
-}
+  expect(url).not.toContain('/api/api/');
+});
 ```
 
-(Adjust the tool/handler import and `ctx` construction to match the file's existing setup — read the file first and reuse its harness.)
+Second, the operational-reality assertion for the actual call:
+
+```ts
+it('reaches the tenant; succeeds or is scope/deploy-gated (403|404)', async () => {
+  try {
+    const res = await listBusinessProcessesTool.handler(
+      { limit: 1, offset: 0 },
+      ctx,
+    );
+    expect(res).toBeDefined();
+  } catch (err) {
+    // Correct URL, but tenant withholds scope (403) or module not
+    // deployed (404). Both acceptable; anything else is a regression.
+    expect(err).toBeInstanceOf(CalmApiError);
+    expect([403, 404]).toContain((err as CalmApiError).status);
+  }
+});
+```
+
+The first test makes the 404 in the second test safe to accept: the
+URL is already proven well-formed, so a 404 can only mean "module not
+deployed", never "wrong base URL". (Adjust the tool/handler import,
+`ctx` construction, and the `describeOAuth2` gate to match the file's
+existing setup — read the file first and reuse its harness.)
 
 - [ ] **Step 4: Build + unit test gate (integration stays gated/skipped without secrets)**
 
@@ -1318,14 +1381,19 @@ npm test 2>&1 | tail -30
 ```
 Expected: `processMonitoring.oauth2` passes via the 403|404 branch; no "double /api" 404s; unit + connection green.
 
-- [ ] **Step 3: Swap the dev `file:` install note for the registry range**
-
-Before publishing, confirm `package.json` `peerDependencies` is `"@mcp-abap-adt/calm-client": "^0.4.0"` (Task B7 set this). The `file:` entry should only be in `devDependencies` for local dev; ensure it is not committed into `dependencies`/`peerDependencies`. Run:
+- [ ] **Step 3: Confirm the manifest references only the registry range**
 
 ```bash
 grep -n "calm-client" package.json
+git diff --stat package.json package-lock.json
 ```
-Expected: peer range `^0.4.0`; any `file:` reference only under `devDependencies` (and ideally removed before publish — note for the maintainer).
+Expected: `package.json` shows `"@mcp-abap-adt/calm-client": "^0.4.0"`
+under `peerDependencies` and **no** `file:` path anywhere. `git diff`
+shows no machine-local path leaked into either manifest. (The local
+build is wired via the `npm link` symlink only, which lives in
+`node_modules` and is never committed.) Before the maintainer
+publishes, they can `npm unlink @mcp-abap-adt/calm-client && npm install`
+to validate against the real registry tarball.
 
 - [ ] **Step 4: Push + PR**
 
