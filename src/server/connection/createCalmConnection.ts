@@ -1,5 +1,6 @@
 import type {
   ICalmConnection,
+  ILogger,
   ITokenRefresher,
 } from '@mcp-abap-adt/interfaces';
 import type { ICalmServerConfig } from '../config';
@@ -10,6 +11,11 @@ import { XsuaaRefresher } from './XsuaaRefresher';
 export interface ICreateCalmConnectionOverrides {
   /** Bring-your-own refresher; overrides the default XsuaaRefresher. */
   tokenRefresher?: ITokenRefresher;
+  /**
+   * Logger passed through to the connection. In a stdio runtime pass a
+   * stderr-only logger (`StderrLogger`); never one that writes stdout.
+   */
+  logger?: ILogger;
 }
 
 export function createCalmConnection(
@@ -28,6 +34,7 @@ export function createCalmConnection(
       baseUrl: config.baseUrl,
       tokenRefresher,
       defaultTimeout: config.timeoutMs,
+      logger: overrides.logger,
     });
   }
   if (config.mode === 'sandbox') {
@@ -35,6 +42,7 @@ export function createCalmConnection(
       baseUrl: config.baseUrl,
       apiKey: config.apiKey as string,
       defaultTimeout: config.timeoutMs,
+      logger: overrides.logger,
     });
   }
   throw new Error(

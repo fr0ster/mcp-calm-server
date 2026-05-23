@@ -269,3 +269,77 @@ describe('createCalmConnection', () => {
     spy.mockRestore();
   });
 });
+
+describe('AbstractCalmConnection logging', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  const fakeLogger = () => {
+    const debug: string[] = [];
+    const warn: string[] = [];
+    return {
+      logger: {
+        info: () => {},
+        error: () => {},
+        warn: (m: string) => warn.push(m),
+        debug: (m: string) => debug.push(m),
+      },
+      debug,
+      warn,
+    };
+  };
+
+  it('logs request + response at debug on success', async () => {
+    jest
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(
+        new Response(JSON.stringify({ value: [] }), { status: 200 }),
+      );
+    const { logger, debug } = fakeLogger();
+    const conn = new TestConn({
+      baseUrl: 'https://t.alm.cloud.sap/api',
+      logger,
+    });
+    await conn.makeRequest({
+      service: 'features',
+      url: '/Features',
+      method: 'GET',
+    });
+    expect(
+      debug.some(
+        (l) => l.includes('GET') && l.includes('/calm-features/v1/Features'),
+      ),
+    ).toBe(true);
+    expect(debug.some((l) => l.includes('200'))).toBe(true);
+  });
+
+  it('logs HTTP error at debug (expected operational signal), not warn', async () => {
+    jest
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response('nope', { status: 403 }));
+    const { logger, debug, warn } = fakeLogger();
+    const conn = new TestConn({
+      baseUrl: 'https://t.alm.cloud.sap/api',
+      logger,
+    });
+    await expect(
+      conn.makeRequest({ service: 'tasks', url: '/tasks', method: 'GET' }),
+    ).rejects.toMatchObject({ status: 403 });
+    expect(debug.some((l) => l.includes('403'))).toBe(true);
+    expect(warn).toHaveLength(0);
+  });
+
+  it('logs transport failure at warn', async () => {
+    jest
+      .spyOn(globalThis, 'fetch')
+      .mockRejectedValue(new TypeError('socket hang up'));
+    const { logger, warn } = fakeLogger();
+    const conn = new TestConn({
+      baseUrl: 'https://t.alm.cloud.sap/api',
+      logger,
+    });
+    await expect(
+      conn.makeRequest({ service: 'tasks', url: '/tasks', method: 'GET' }),
+    ).rejects.toMatchObject({ code: 'NETWORK' });
+    expect(warn.some((l) => l.includes('failed'))).toBe(true);
+  });
+});

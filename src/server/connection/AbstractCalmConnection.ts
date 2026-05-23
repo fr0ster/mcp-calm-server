@@ -4,6 +4,7 @@ import type {
   ICalmConnection,
   ICalmRequestOptions,
   ICalmResponse,
+  ILogger,
 } from '@mcp-abap-adt/interfaces';
 import {
   type CalmServiceRouteMap,
@@ -15,6 +16,13 @@ export interface IAbstractCalmConnectionOptions {
   defaultTimeout?: number;
   serviceRoutes?: Partial<CalmServiceRouteMap>;
   defaultHeaders?: Record<string, string>;
+  /**
+   * Optional logger. Request lifecycle is logged at `debug`; transport
+   * failures at `warn`. In a stdio MCP runtime this MUST be a
+   * stderr-only logger (see `StderrLogger`) — never one that writes to
+   * stdout.
+   */
+  logger?: ILogger;
 }
 
 function trimTrailingSlash(v: string): string {
@@ -48,6 +56,7 @@ export abstract class AbstractCalmConnection implements ICalmConnection {
   protected readonly defaultTimeout: number;
   protected readonly defaultHeaders: Record<string, string>;
   protected readonly serviceRoutes: CalmServiceRouteMap;
+  protected readonly logger?: ILogger;
 
   constructor(options: IAbstractCalmConnectionOptions) {
     this.baseUrl = trimTrailingSlash(options.baseUrl);
@@ -60,6 +69,7 @@ export abstract class AbstractCalmConnection implements ICalmConnection {
       ...DEFAULT_CALM_SERVICE_ROUTES,
       ...options.serviceRoutes,
     };
+    this.logger = options.logger;
   }
 
   /** Subclass: return auth headers for a request. */
@@ -91,21 +101,47 @@ export abstract class AbstractCalmConnection implements ICalmConnection {
       : this.baseUrl;
     const url = joinUrl(base, options.url) + toQueryString(options.params);
 
+    this.logger?.debug(`[calm] ${options.method} ${url}`);
     try {
       return await this.execute<T, D>(url, options);
     } catch (err) {
       const status = err instanceof CalmApiError ? err.status : undefined;
       if (status !== undefined && (await this.onAuthFailure(status))) {
+        this.logger?.debug(
+          `[calm] ${status} from ${options.method} ${url} — refreshed auth, retrying once`,
+        );
         // Retry once. The retry's own errors (network, abort, HTTP) go
         // through the same normalization — never escape as a raw error.
         try {
           return await this.execute<T, D>(url, options);
         } catch (retryErr) {
-          throw this.normalizeError(retryErr);
+          throw this.logFail(
+            options.method,
+            url,
+            this.normalizeError(retryErr),
+          );
         }
       }
-      throw this.normalizeError(err);
+      throw this.logFail(options.method, url, this.normalizeError(err));
     }
+  }
+
+  private logFail(
+    method: string,
+    url: string,
+    err: CalmApiError,
+  ): CalmApiError {
+    // HTTP statuses (403/404/4xx/5xx) are expected operational signals —
+    // log at debug. Transport/network failures (no status) are logged at
+    // warn since they usually indicate misconfiguration or outage.
+    if (err.status === undefined) {
+      this.logger?.warn(`[calm] ${method} ${url} failed: ${err.message}`);
+    } else {
+      this.logger?.debug(
+        `[calm] ${method} ${url} -> ${err.status} (${err.code})`,
+      );
+    }
+    return err;
   }
 
   private normalizeError(err: unknown): CalmApiError {
@@ -146,6 +182,7 @@ export abstract class AbstractCalmConnection implements ICalmConnection {
       throw calmErrorFromBody(response.status, parsed ?? raw);
     }
 
+    this.logger?.debug(`[calm] ${response.status} ${options.method} ${url}`);
     const outHeaders: Record<string, string> = {};
     response.headers.forEach((v, k) => {
       outHeaders[k] = v;
