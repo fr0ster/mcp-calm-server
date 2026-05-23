@@ -3,6 +3,8 @@ import type { ITokenRefresher } from '@mcp-abap-adt/interfaces';
 import { AbstractCalmConnection } from '../../../server/connection/AbstractCalmConnection';
 import { OAuth2CalmConnection } from '../../../server/connection/OAuth2CalmConnection';
 import { SandboxCalmConnection } from '../../../server/connection/SandboxCalmConnection';
+import { createCalmConnection } from '../../../server/connection/createCalmConnection';
+import type { ICalmServerConfig } from '../../../server/config';
 
 // Concrete test double exposing protected hooks with a no-auth header.
 class TestConn extends AbstractCalmConnection {
@@ -181,5 +183,67 @@ describe('OAuth2CalmConnection', () => {
       conn.makeRequest({ service: 'tasks', url: '/tasks', method: 'GET' }),
     ).rejects.toMatchObject({ name: 'CalmApiError', code: 'NETWORK' });
     expect(r.refreshes).toBe(1);
+  });
+});
+
+describe('createCalmConnection', () => {
+  it('returns an OAuth2 connection for oauth2 mode', async () => {
+    const cfg: ICalmServerConfig = {
+      mode: 'oauth2',
+      baseUrl: 'https://t.alm.cloud.sap/api',
+      uaaUrl: 'https://u.auth',
+      uaaClientId: 'id',
+      uaaClientSecret: 'secret',
+      timeoutMs: 30_000,
+    };
+    const conn = createCalmConnection(cfg);
+    expect(await conn.getServiceUrl('features')).toBe(
+      'https://t.alm.cloud.sap/api/calm-features/v1',
+    );
+  });
+
+  it('returns a Sandbox connection for sandbox mode', async () => {
+    const cfg: ICalmServerConfig = {
+      mode: 'sandbox',
+      baseUrl: 'https://sandbox.api.sap.com/SAPCALM',
+      apiKey: 'KEY',
+      timeoutMs: 30_000,
+    };
+    const conn = createCalmConnection(cfg);
+    expect(await conn.getServiceUrl('logs')).toBe(
+      'https://sandbox.api.sap.com/SAPCALM/calm-logs/v1',
+    );
+  });
+
+  it('honours an injected tokenRefresher override', async () => {
+    const calls: string[] = [];
+    const cfg: ICalmServerConfig = {
+      mode: 'oauth2',
+      baseUrl: 'https://t.alm.cloud.sap/api',
+      uaaUrl: 'https://u.auth',
+      uaaClientId: 'id',
+      uaaClientSecret: 'secret',
+      timeoutMs: 30_000,
+    };
+    const conn = createCalmConnection(cfg, {
+      tokenRefresher: {
+        async getToken() {
+          calls.push('get');
+          return 'injected';
+        },
+        async refreshToken() {
+          return 'injected';
+        },
+      },
+    });
+    const spy = jest
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(JSON.stringify({ value: [] }), { status: 200 }));
+    await conn.makeRequest({ service: 'tasks', url: '/tasks', method: 'GET' });
+    expect(calls).toContain('get');
+    expect((spy.mock.calls[0][1] as RequestInit).headers).toMatchObject({
+      Authorization: 'Bearer injected',
+    });
+    spy.mockRestore();
   });
 });
