@@ -127,14 +127,14 @@ the `CalmClient` differs.
 - `src/index.ts` stops re-exporting `CalmConnection`,
   `ICalmConnectionOptions`, `XsuaaRefresher`. Keeps re-exports of
   pure contracts.
-- **New public re-exports** required by the moved server-side
-  connection impls (which import error primitives from calm-client):
-  add `parseCalmError`, `toCalmApiError` to `src/index.ts` alongside
-  the already-exported `CalmApiError`/`CalmApiErrorCode`. Without
-  this, the server-side connection cannot construct the same error
-  shape and the regression gate fails. (Root re-export keeps it
-  simple; a `./errors` subpath export is also acceptable if a
-  cleaner package surface is preferred — pick one, not both.)
+- **New public re-export** required by the moved server-side
+  connection impls: add the transport-agnostic `calmErrorFromBody`
+  (see "Transport-agnostic error helper" above) to `src/index.ts`
+  alongside the already-exported `CalmApiError`/`CalmApiErrorCode`.
+  Remove the axios-coupled `toCalmApiError` (dead once
+  `CalmConnection.ts` is gone). Without `calmErrorFromBody` the
+  server-side connection cannot construct the same error shape and
+  the regression gate fails.
 - Unit tests that constructed a real `CalmConnection` switch to an
   in-file `MockCalmConnection` — a few lines implementing
   `ICalmConnection` directly. Do **not** dev-depend on `calm-server`
@@ -188,16 +188,38 @@ axios-based `CalmConnection` produces — i.e. `CalmApiError`
 `mapCalmErrorForTool` in `src/utils/errorMapping.ts` already handles.
 Generic `throw new Error(...)` is not acceptable.
 
-**Where the error primitives live:** `CalmApiError`,
-`parseCalmError`, and `toCalmApiError` stay in `calm-client`
-(`@mcp-abap-adt/calm-client/src/errors/`,
-`/src/connection/parseCalmError.ts`). The new connection impls in
-`calm-server/src/server/connection/` import them from
-`@mcp-abap-adt/calm-client`. This is the natural dependency
-direction (server already depends on client) and avoids duplicating
-the error classes. Do **not** re-implement `CalmApiError` server-side
-or move the error module — that would create two non-equal classes
-across packages and break `instanceof` checks in existing handlers. Unit tests in both
+**Where the error primitives live:** `CalmApiError` stays in
+`calm-client` (`@mcp-abap-adt/calm-client/src/errors/`). The new
+connection impls in `calm-server/src/server/connection/` import it
+from `@mcp-abap-adt/calm-client` and build errors via its public
+static factories (`CalmApiError.fromOData`, `.fromHttp`,
+`.fromNetwork`). This is the natural dependency direction (server
+already depends on client) and avoids duplicating the error classes.
+Do **not** re-implement `CalmApiError` server-side or move the error
+module — that would create two non-equal classes across packages and
+break `instanceof` checks in existing handlers.
+
+**Transport-agnostic error helper:** the current
+`toCalmApiError(cause)` in `calm-client/src/connection/parseCalmError.ts`
+is **axios-coupled** — it reads `cause.response.status` /
+`cause.response.data`. A `fetch`-based connection has no such error
+object. Refactor `parseCalmError.ts` to split out a
+transport-agnostic core and export it:
+
+```ts
+// returns CalmApiError from an already-extracted (status, parsedBody)
+export function calmErrorFromBody(status: number, data: unknown): CalmApiError;
+```
+
+`calmErrorFromBody` performs the OData-shape detection (currently the
+private `hasODataErrorShape`) and dispatches to
+`CalmApiError.fromOData` / `.fromHttp`. The legacy axios
+`toCalmApiError` is removed along with the axios-based
+`CalmConnection`; nothing else in calm-client consumes it (verified:
+only `CalmConnection.ts` imported it). The fetch connection in
+calm-server calls `calmErrorFromBody(status, body)` for HTTP errors
+and `CalmApiError.fromNetwork(cause, msg)` for transport failures.
+This supersedes the earlier note about exporting `toCalmApiError`. Unit tests in both
 calm-client (for whatever error-translation surface remains there)
 and calm-server (`errorMapping` tests + integration suites) must
 pass unchanged against the new transport — that is the regression
