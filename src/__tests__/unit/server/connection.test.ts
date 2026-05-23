@@ -1,10 +1,10 @@
 import { CalmApiError } from '@mcp-abap-adt/calm-client';
 import type { ITokenRefresher } from '@mcp-abap-adt/interfaces';
+import type { ICalmServerConfig } from '../../../server/config';
 import { AbstractCalmConnection } from '../../../server/connection/AbstractCalmConnection';
+import { createCalmConnection } from '../../../server/connection/createCalmConnection';
 import { OAuth2CalmConnection } from '../../../server/connection/OAuth2CalmConnection';
 import { SandboxCalmConnection } from '../../../server/connection/SandboxCalmConnection';
-import { createCalmConnection } from '../../../server/connection/createCalmConnection';
-import type { ICalmServerConfig } from '../../../server/config';
 
 // Concrete test double exposing protected hooks with a no-auth header.
 class TestConn extends AbstractCalmConnection {
@@ -57,7 +57,11 @@ describe('AbstractCalmConnection (fetch)', () => {
     const conn = new TestConn({ baseUrl: 'https://t.alm.cloud.sap/api' });
     await expect(
       conn.makeRequest({ service: 'tasks', url: '/tasks', method: 'GET' }),
-    ).rejects.toMatchObject({ name: 'CalmApiError', code: 'HTTP_ERROR', status: 404 });
+    ).rejects.toMatchObject({
+      name: 'CalmApiError',
+      code: 'HTTP_ERROR',
+      status: 404,
+    });
   });
 
   it('throws CalmApiError(ODATA_ERROR) on a 400 OData envelope', async () => {
@@ -95,12 +99,18 @@ describe('SandboxCalmConnection', () => {
   it('sends the APIKey header', async () => {
     const spy = jest
       .spyOn(globalThis, 'fetch')
-      .mockResolvedValue(new Response(JSON.stringify({ value: [] }), { status: 200 }));
+      .mockResolvedValue(
+        new Response(JSON.stringify({ value: [] }), { status: 200 }),
+      );
     const conn = new SandboxCalmConnection({
       baseUrl: 'https://sandbox.api.sap.com/SAPCALM',
       apiKey: 'KEY123',
     });
-    await conn.makeRequest({ service: 'features', url: '/Features', method: 'GET' });
+    await conn.makeRequest({
+      service: 'features',
+      url: '/Features',
+      method: 'GET',
+    });
     expect((spy.mock.calls[0][1] as RequestInit).headers).toMatchObject({
       APIKey: 'KEY123',
     });
@@ -110,7 +120,9 @@ describe('SandboxCalmConnection', () => {
 describe('OAuth2CalmConnection', () => {
   afterEach(() => jest.restoreAllMocks());
 
-  const refresher = (token = 'tok'): ITokenRefresher & { refreshes: number } => {
+  const refresher = (
+    token = 'tok',
+  ): ITokenRefresher & { refreshes: number } => {
     const r = {
       refreshes: 0,
       async getToken() {
@@ -127,7 +139,9 @@ describe('OAuth2CalmConnection', () => {
   it('sends a Bearer token from the refresher', async () => {
     const spy = jest
       .spyOn(globalThis, 'fetch')
-      .mockResolvedValue(new Response(JSON.stringify({ value: [] }), { status: 200 }));
+      .mockResolvedValue(
+        new Response(JSON.stringify({ value: [] }), { status: 200 }),
+      );
     const conn = new OAuth2CalmConnection({
       baseUrl: 'https://t.alm.cloud.sap/api',
       tokenRefresher: refresher('abc'),
@@ -143,12 +157,18 @@ describe('OAuth2CalmConnection', () => {
     const spy = jest
       .spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(new Response('nope', { status: 401 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ value: [] }), { status: 200 }));
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ value: [] }), { status: 200 }),
+      );
     const conn = new OAuth2CalmConnection({
       baseUrl: 'https://t.alm.cloud.sap/api',
       tokenRefresher: r,
     });
-    const res = await conn.makeRequest({ service: 'tasks', url: '/tasks', method: 'GET' });
+    const res = await conn.makeRequest({
+      service: 'tasks',
+      url: '/tasks',
+      method: 'GET',
+    });
     expect(res.status).toBe(200);
     expect(r.refreshes).toBe(1);
     expect(spy).toHaveBeenCalledTimes(2);
@@ -238,7 +258,9 @@ describe('createCalmConnection', () => {
     });
     const spy = jest
       .spyOn(globalThis, 'fetch')
-      .mockResolvedValue(new Response(JSON.stringify({ value: [] }), { status: 200 }));
+      .mockResolvedValue(
+        new Response(JSON.stringify({ value: [] }), { status: 200 }),
+      );
     await conn.makeRequest({ service: 'tasks', url: '/tasks', method: 'GET' });
     expect(calls).toContain('get');
     expect((spy.mock.calls[0][1] as RequestInit).headers).toMatchObject({
