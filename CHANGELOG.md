@@ -1,5 +1,45 @@
 # Changelog
 
+## 0.4.0 — 2026-05-24
+
+Follows `@mcp-abap-adt/calm-client@0.4.0` (connection moved out of the
+client). Combines the auth-broker integration (M19) with a
+server-owned connection layer.
+
+### Changed (BREAKING)
+
+- **The server now owns the CALM connection.** New
+  `src/server/connection/` module on native `fetch`:
+  `AbstractCalmConnection`, `SandboxCalmConnection` (api-key),
+  `OAuth2CalmConnection` (Bearer via `ITokenRefresher`, one-shot
+  refresh+retry on 401/403), and the
+  `createCalmConnection(config, overrides?)` factory. Exposed via the
+  `./connection` subpath export. `@mcp-abap-adt/calm-client` no longer
+  ships `CalmConnection` (peer bumped to `^0.4.0`).
+- **`CALM_BASE_URL` is consumed verbatim** — service routes are appended
+  by plain concatenation; no `/api` injection. Paste `endpoints.Api`
+  from the service-key as-is (it already includes `/api`). Fixes the
+  silent double-`/api` 404 against live tenants.
+
+### Added
+
+- **Token acquisition via `@mcp-abap-adt/auth-broker`** (M19):
+  `buildCalmClient` is `async`, honours `CALM_AUTH_FLOW`
+  (`client_credentials` | `authorization_code`), and sources UAA creds
+  from inline `CALM_UAA_*` (legacy shim) or `./{destination}.env`
+  (produced by the `mcp-auth` CLI). The broker yields the
+  `ITokenRefresher` that is injected into `OAuth2CalmConnection` via the
+  factory's `tokenRefresher` override.
+- **Request-lifecycle logging** in the connection via an optional
+  `ILogger` (debug on request/response/retry, warn on transport
+  failure), threaded from `runStdio` through the stderr-safe
+  `StderrLogger`.
+
+### Fixed
+
+- `dotenv` moved from `devDependencies` to `dependencies` (imported at
+  runtime by `config.ts`).
+
 ## 0.3.0 — 2026-05-13
 
 Follows `@mcp-abap-adt/calm-client@0.3.0` (issue / PR #3 / #4 there).
