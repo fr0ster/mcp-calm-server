@@ -31,14 +31,14 @@ const definition: ICalmToolDefinition = {
       serviceId: {
         type: 'string',
         description:
-          'Optional service id filter (emitted as `logsFilters[serviceId]`).',
+          'Service id filter, emitted as a plain `serviceId` query param. The live Logs API requires it alongside `provider` and rejects a request without it (HTTP 428).',
       },
       from: { type: 'string', description: 'ISO timestamp, inclusive start.' },
       to: { type: 'string', description: 'ISO timestamp, exclusive end.' },
       period: {
         type: 'string',
         description:
-          'Period shorthand (e.g. "1h", "24h"). Alternative to from/to.',
+          'Period shorthand in the Logs API format `<n>M` minutes (e.g. "10M" = last 10 minutes), NOT "1h"/"24h". Alternative to from/to. Wide windows can exceed the server count cap (HTTP 403) — narrow the period.',
       },
       limit: { type: 'integer', minimum: 1, maximum: 1000 },
       offset: { type: 'integer', minimum: 0 },
