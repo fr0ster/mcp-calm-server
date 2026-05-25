@@ -13,6 +13,7 @@ export interface IGetLogsArgs {
   period?: string;
   limit?: number;
   offset?: number;
+  onLimit?: string;
 }
 
 export interface IGetLogsResult {
@@ -40,8 +41,19 @@ const definition: ICalmToolDefinition = {
         description:
           'Period shorthand in the Logs API format `<n>M` minutes (e.g. "10M" = last 10 minutes), NOT "1h"/"24h". Alternative to from/to. Wide windows can exceed the server count cap (HTTP 403) — narrow the period.',
       },
-      limit: { type: 'integer', minimum: 1, maximum: 1000 },
+      limit: {
+        type: 'integer',
+        minimum: 1,
+        maximum: 1000,
+        description:
+          'Max records to return. The Logs API only honours this together with the count-cap strategy — the client auto-sets `onLimit="truncate"` when `limit` is given, so paging works out of the box.',
+      },
       offset: { type: 'integer', minimum: 0 },
+      onLimit: {
+        type: 'string',
+        description:
+          'Server-side count-cap strategy. Defaults to "truncate" when `limit`/`offset` is set (the only value that returns data on a window over the cap; otherwise the API responds HTTP 403). Override only if you know another value the tenant accepts.',
+      },
     },
   },
 };
@@ -65,6 +77,7 @@ const handler: CalmToolHandler<IGetLogsArgs, IGetLogsResult> = async (
       period: args.period,
       limit: args.limit,
       offset: args.offset,
+      onLimit: args.onLimit,
     });
     return { records };
   } catch (err) {

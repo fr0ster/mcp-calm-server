@@ -222,5 +222,15 @@ describe('M4 — read-only tools across 8 services', () => {
         limit: 50,
       });
     });
+
+    test('get forwards an explicit onLimit strategy', async () => {
+      const { calm, calls } = mockCalm(() => ({ logs: [] }));
+      await getLogsTool.handler(
+        { calm },
+        { provider: 'sap-alm', limit: 5, onLimit: 'reject' },
+      );
+      const params = calls[0].args[0] as Record<string, unknown>;
+      expect(params).toMatchObject({ limit: 5, onLimit: 'reject' });
+    });
   });
 });
