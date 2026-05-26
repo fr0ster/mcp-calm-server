@@ -175,11 +175,17 @@ export abstract class AbstractCalmConnection implements ICalmConnection {
     }
 
     const response = await fetch(url, init);
-    const raw = await response.text();
-    const parsed = raw ? safeJson(raw) : undefined;
+    // Read raw bytes once. Binary responses (e.g. the Logs OTLP
+    // `application/x-protobuf` payload) must keep their exact bytes —
+    // decoding through `response.text()` would mangle them via UTF-8 and
+    // make protobuf undecodable. Textual responses are decoded + JSON-parsed
+    // as before. Errors are always JSON/text, so decode them as text.
+    const bytes = Buffer.from(await response.arrayBuffer());
 
     if (!response.ok) {
-      throw calmErrorFromBody(response.status, parsed ?? raw);
+      const text = bytes.toString('utf8');
+      const parsed = text ? safeJson(text) : undefined;
+      throw calmErrorFromBody(response.status, parsed ?? text);
     }
 
     this.logger?.debug(`[calm] ${response.status} ${options.method} ${url}`);
@@ -187,8 +193,16 @@ export abstract class AbstractCalmConnection implements ICalmConnection {
     response.headers.forEach((v, k) => {
       outHeaders[k] = v;
     });
+
+    let data: unknown;
+    if (isBinaryContentType(outHeaders['content-type'])) {
+      data = bytes.length ? bytes : undefined;
+    } else {
+      const text = bytes.toString('utf8');
+      data = text ? safeJson(text) : undefined;
+    }
     return {
-      data: parsed as T,
+      data: data as T,
       status: response.status,
       statusText: response.statusText,
       headers: outHeaders,
@@ -202,4 +216,20 @@ function safeJson(text: string): unknown {
   } catch {
     return text;
   }
+}
+
+/**
+ * A response body is treated as raw bytes (returned as a `Buffer`) unless its
+ * Content-Type is textual. Anything that isn't JSON / text / XML / form data —
+ * notably `application/x-protobuf` and `application/octet-stream` — is binary.
+ */
+function isBinaryContentType(contentType: string | undefined): boolean {
+  if (!contentType) return false;
+  const ct = contentType.toLowerCase();
+  return !(
+    ct.includes('json') ||
+    ct.startsWith('text/') ||
+    ct.includes('xml') ||
+    ct.includes('x-www-form-urlencoded')
+  );
 }

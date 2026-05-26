@@ -1,5 +1,39 @@
 # Changelog
 
+## 0.5.0 — 2026-05-26
+
+### Added
+
+- **`calm_logs_get` now decodes the OTLP response into JSON.** The Cloud
+  ALM Logs API returns an OpenTelemetry `application/x-protobuf` body, not
+  JSON. The tool decodes it into canonical OTLP JSON under `records`
+  (`{ resourceLogs: [{ resource, scopeLogs: [{ scope, logRecords }] }] }`)
+  using an embedded minimal OTLP schema (`src/tools/logs/otlpProto.ts`) +
+  `protobufjs`. Verified live on tenant `eu10-004`: ABAP Application Log
+  records with `service.name`, `sap.exm.*` attributes decode correctly.
+- **`calm_logs_get` gains `raw: true`** — returns the undecoded protobuf as
+  a base64 string with `encoding: "base64"`, for debugging or forwarding to
+  another OTLP consumer.
+
+### Changed
+
+- **The connection returns a `Buffer` for binary responses.**
+  `AbstractCalmConnection` previously read every body via `response.text()`,
+  which mangled protobuf bytes through UTF-8. It now reads the raw bytes and
+  returns a `Buffer` for non-textual Content-Types (e.g.
+  `application/x-protobuf`, `application/octet-stream`); JSON/text/XML
+  responses are decoded and parsed exactly as before. Response shaping
+  (OTLP→JSON) stays in the tool layer — the client remains transport-only.
+
+## 0.4.1 — 2026-05-25
+
+### Changed
+
+- Realign with `@mcp-abap-adt/calm-client@0.4.2`: `calm_logs_get` exposes an
+  optional `onLimit` (defaults to `truncate` in the client when
+  `limit`/`offset` is set, so paging no longer 403s). Corrected the
+  `period` (`<n>M` minutes, not `1h`) and `serviceId` parameter descriptions.
+
 ## 0.4.0 — 2026-05-24
 
 Follows `@mcp-abap-adt/calm-client@0.4.0` (connection moved out of the

@@ -4,6 +4,7 @@ import type {
   ICalmToolDefinition,
 } from '../../registry/types';
 import { CalmToolError, mapCalmErrorForTool } from '../../utils';
+import { decodeOtlpLogs } from './otlpLogs';
 
 export interface IGetLogsArgs {
   provider: string;
@@ -14,16 +15,19 @@ export interface IGetLogsArgs {
   limit?: number;
   offset?: number;
   onLimit?: string;
+  raw?: boolean;
 }
 
 export interface IGetLogsResult {
   records: unknown;
+  /** Present only when the body was returned undecoded (`raw: true`). */
+  encoding?: 'base64';
 }
 
 const definition: ICalmToolDefinition = {
   name: 'calm_logs_get',
   description:
-    'Fetch application logs from Cloud ALM Logs (OpenTelemetry-style). Unlike other Cloud ALM services, Logs uses a domain-specific REST query (not OData). `provider` is required; filter by `serviceId`, or a time window via `from`/`to` (ISO timestamps) or `period`. Returns the raw `records` payload.',
+    'Fetch application logs from Cloud ALM Logs (OpenTelemetry-style). Unlike other Cloud ALM services, Logs uses a domain-specific REST query (not OData). `provider` is required; filter by `serviceId`, or a time window via `from`/`to` (ISO timestamps) or `period`. The Logs API returns an OTLP `application/x-protobuf` body; this tool decodes it into canonical OTLP JSON under `records` (`{ resourceLogs: [...] }`). Set `raw: true` to instead get the undecoded protobuf as a base64 string.',
   inputSchema: {
     type: 'object',
     required: ['provider'],
@@ -54,6 +58,11 @@ const definition: ICalmToolDefinition = {
         description:
           'Server-side count-cap strategy. Defaults to "truncate" when `limit`/`offset` is set (the only value that returns data on a window over the cap; otherwise the API responds HTTP 403). Override only if you know another value the tenant accepts.',
       },
+      raw: {
+        type: 'boolean',
+        description:
+          'When true, return the undecoded OTLP protobuf body as a base64 string (with `encoding: "base64"`) instead of decoded JSON. For debugging or feeding another OTLP consumer.',
+      },
     },
   },
 };
@@ -69,7 +78,7 @@ const handler: CalmToolHandler<IGetLogsArgs, IGetLogsResult> = async (
     });
   }
   try {
-    const records = await ctx.calm.getLogs().get({
+    const body = await ctx.calm.getLogs().get({
       provider: args.provider,
       serviceId: args.serviceId,
       from: args.from,
@@ -79,11 +88,32 @@ const handler: CalmToolHandler<IGetLogsArgs, IGetLogsResult> = async (
       offset: args.offset,
       onLimit: args.onLimit,
     });
-    return { records };
+
+    // The Logs API returns OTLP `application/x-protobuf` (delivered as a
+    // Buffer by the connection) when there are records, and a plain JSON
+    // body (e.g. `{}`) when the window is empty. Decode the former into
+    // canonical OTLP JSON; pass anything non-binary through unchanged.
+    const bytes = asBytes(body);
+    if (!bytes) {
+      return { records: body };
+    }
+    if (args.raw) {
+      return {
+        records: Buffer.from(bytes).toString('base64'),
+        encoding: 'base64',
+      };
+    }
+    return { records: decodeOtlpLogs(bytes) };
   } catch (err) {
     throw mapCalmErrorForTool(err);
   }
 };
+
+function asBytes(body: unknown): Uint8Array | undefined {
+  if (Buffer.isBuffer(body)) return body;
+  if (body instanceof Uint8Array) return body;
+  return undefined;
+}
 
 export const getLogsTool: ICalmHandlerEntry<IGetLogsArgs, IGetLogsResult> = {
   toolDefinition: definition,

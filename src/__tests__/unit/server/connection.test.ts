@@ -76,6 +76,26 @@ describe('AbstractCalmConnection (fetch)', () => {
     ).rejects.toMatchObject({ code: 'ODATA_ERROR', status: 400 });
   });
 
+  it('returns a Buffer with exact bytes for a binary (protobuf) response', async () => {
+    // Logs returns application/x-protobuf. response.text() would mangle the
+    // bytes through UTF-8; the tool needs the raw bytes to decode OTLP.
+    const bytes = new Uint8Array([0x0a, 0x00, 0xff, 0xfe, 0x80, 0x01]);
+    jest.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(bytes, {
+        status: 200,
+        headers: { 'content-type': 'application/x-protobuf' },
+      }),
+    );
+    const conn = new TestConn({ baseUrl: 'https://t.alm.cloud.sap/api' });
+    const res = await conn.makeRequest<Buffer>({
+      service: 'logs',
+      url: '/logs',
+      method: 'GET',
+    });
+    expect(Buffer.isBuffer(res.data)).toBe(true);
+    expect(Uint8Array.from(res.data)).toEqual(bytes);
+  });
+
   it('serializes object params into the query string', async () => {
     const spy = jest
       .spyOn(globalThis, 'fetch')

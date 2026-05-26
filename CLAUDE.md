@@ -58,6 +58,25 @@ interface. Tokens come from `@mcp-abap-adt/auth-broker` (see
 `auth/buildBroker.ts`), injected into the connection as an
 `ITokenRefresher`.
 
+## Critical pitfall: Logs returns OTLP protobuf, not JSON
+
+`/calm-logs/v1/logs` (GET) always responds `application/x-protobuf` — an
+OpenTelemetry `ExportLogsServiceRequest`. The `format` query param and the
+`Accept` header are both **ignored**; there is no JSON mode on the wire.
+Consequences baked into the code:
+
+- `AbstractCalmConnection` returns a **`Buffer`** for non-textual
+  Content-Types (reading the body as `response.text()` would mangle the
+  bytes via UTF-8). JSON/text/XML responses still parse as before.
+- **Response shaping lives in the tool, not the client.** `listTasksTool`
+  filters client-side; `getLogsTool` decodes the protobuf into canonical
+  OTLP JSON via an embedded minimal schema (`src/tools/logs/otlpProto.ts`)
+  + `protobufjs` (`src/tools/logs/otlpLogs.ts`). The client stays
+  transport-only and returns the raw `Buffer`.
+- Logs paging is non-standard: `limit`/`offset` only work alongside
+  `onLimit=truncate` (the client defaults it); `top/$top/pageSize/page`
+  → 400 "Unknown filter"; `period` is `<n>M` minutes, not `1h`.
+
 ## Critical pitfall: parts of SAP Cloud ALM are NOT OData
 
 Several endpoints look like OData (return `IODataCollection<T>`) but

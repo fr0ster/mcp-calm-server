@@ -1,6 +1,6 @@
 {
   "name": "@mcp-abap-adt/calm-server",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "MCP server + reusable tool primitives for SAP Cloud ALM, backed by @mcp-abap-adt/calm-client.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -75,7 +75,8 @@
     "@modelcontextprotocol/sdk": "^1.0.0"
   },
   "dependencies": {
-    "dotenv": "^17.3.1"
+    "dotenv": "^17.3.1",
+    "protobufjs": "^8.4.2"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.4",

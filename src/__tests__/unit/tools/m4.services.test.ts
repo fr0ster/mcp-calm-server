@@ -1,4 +1,5 @@
 import { CalmApiError } from '@mcp-abap-adt/calm-client';
+import protobuf from 'protobufjs';
 import { listAnalyticsProvidersTool } from '../../../tools/analytics/listAnalyticsProviders';
 import { queryAnalyticsTool } from '../../../tools/analytics/queryAnalytics';
 import { getDocumentTool } from '../../../tools/documents/getDocument';
@@ -6,6 +7,7 @@ import { listDocumentsTool } from '../../../tools/documents/listDocuments';
 import { getHierarchyWithChildrenTool } from '../../../tools/hierarchy/getHierarchyWithChildren';
 import { listHierarchyTool } from '../../../tools/hierarchy/listHierarchy';
 import { getLogsTool } from '../../../tools/logs/getLogs';
+import { OTLP_LOGS_PROTO } from '../../../tools/logs/otlpProto';
 import { listBusinessProcessesTool } from '../../../tools/processMonitoring/listBusinessProcesses';
 import { getProjectTool } from '../../../tools/projects/getProject';
 import { listProjectsTool } from '../../../tools/projects/listProjects';
@@ -232,5 +234,57 @@ describe('M4 — read-only tools across 8 services', () => {
       const params = calls[0].args[0] as Record<string, unknown>;
       expect(params).toMatchObject({ limit: 5, onLimit: 'reject' });
     });
+
+    test('get decodes an OTLP protobuf buffer into canonical JSON', async () => {
+      const bytes = encodeOtlpSample();
+      const { calm } = mockCalm(() => Buffer.from(bytes));
+      const res = (await getLogsTool.handler(
+        { calm },
+        { provider: 'sap-alm' },
+      )) as { records: { resourceLogs: unknown[] } };
+      expect(Array.isArray(res.records.resourceLogs)).toBe(true);
+      expect(res.records.resourceLogs).toHaveLength(1);
+    });
+
+    test('get returns base64 protobuf when raw=true', async () => {
+      const bytes = encodeOtlpSample();
+      const { calm } = mockCalm(() => Buffer.from(bytes));
+      const res = (await getLogsTool.handler(
+        { calm },
+        { provider: 'sap-alm', raw: true },
+      )) as { records: string; encoding?: string };
+      expect(res.encoding).toBe('base64');
+      expect(res.records).toBe(Buffer.from(bytes).toString('base64'));
+    });
+
+    test('get passes a non-binary (empty) response through unchanged', async () => {
+      const { calm } = mockCalm(() => ({}));
+      const res = (await getLogsTool.handler(
+        { calm },
+        { provider: 'sap-alm' },
+      )) as { records: unknown };
+      expect(res.records).toEqual({});
+    });
   });
 });
+
+function encodeOtlpSample(): Uint8Array {
+  const root = protobuf.parse(OTLP_LOGS_PROTO).root;
+  const Req = root.lookupType(
+    'opentelemetry.proto.logs.v1.ExportLogsServiceRequest',
+  );
+  return Req.encode(
+    Req.create({
+      resourceLogs: [
+        {
+          resource: {
+            attributes: [
+              { key: 'service.name', value: { stringValue: 'E19.100' } },
+            ],
+          },
+          scopeLogs: [{ logRecords: [{ severityText: 'Error' }] }],
+        },
+      ],
+    }),
+  ).finish();
+}
