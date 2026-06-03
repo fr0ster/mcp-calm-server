@@ -32,7 +32,7 @@ const { buildCalmClient } = await import('../dist/server/buildClient.js');
 const { readConfig } = await import('../dist/server/config.js');
 const { decodeOtlpLogs } = await import('../dist/tools/logs/otlpLogs.js');
 
-const calm = buildCalmClient(readConfig());
+const calm = await buildCalmClient(readConfig());
 
 const base = {
   provider: process.env.LOGS_PROVIDER ?? 'exm.im',
@@ -52,6 +52,8 @@ const variants = [
 ];
 
 function describeBody(body) {
+  if (body === undefined) return 'EMPTY  (response.data === undefined)';
+  if (body === null) return 'EMPTY  (response.data === null)';
   if (Buffer.isBuffer(body) || body instanceof Uint8Array) {
     const bytes = Buffer.from(body);
     let decoded = 'decode-failed';
@@ -66,8 +68,9 @@ function describeBody(body) {
     }
     return `BINARY ${String(bytes.length).padStart(7)}B  decode=${decoded} resourceLogs=${count}`;
   }
-  const json = JSON.stringify(body);
-  return `JSON   ${String(json.length).padStart(7)}c  ${json.slice(0, 120)}`;
+  const ctor = body?.constructor?.name ?? typeof body;
+  const json = JSON.stringify(body) ?? String(body);
+  return `${`JSON<${ctor}>`.padEnd(14)} ${String(json.length).padStart(5)}c  ${json.slice(0, 120)}`;
 }
 
 console.log(`probe-logs → ${base.provider} / ${base.serviceId} / period=${base.period}\n`);
