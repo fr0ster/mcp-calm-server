@@ -58,24 +58,46 @@ interface. Tokens come from `@mcp-abap-adt/auth-broker` (see
 `auth/buildBroker.ts`), injected into the connection as an
 `ITokenRefresher`.
 
-## Critical pitfall: Logs returns OTLP protobuf, not JSON
+## Critical pitfall: Logs default to OTLP protobuf (but `format=protobuf-json` flips to JSON)
 
-`/calm-logs/v1/logs` (GET) always responds `application/x-protobuf` — an
-OpenTelemetry `ExportLogsServiceRequest`. The `format` query param and the
-`Accept` header are both **ignored**; there is no JSON mode on the wire.
+`/calm-logs/v1/logs` (GET) responds `application/x-protobuf` by default —
+an OpenTelemetry `ExportLogsServiceRequest`. **The `format` query param is
+NOT ignored**, contrary to what this note used to claim: the specific value
+`format=protobuf-json` switches the wire response to `application/json`
+carrying the *same* `{ resourceLogs: [...] }` OTLP shape. Other values
+(`format=json`, or omitting `format`) → protobuf. Verified live on tenant
+`eu10-004`, window `provider=exm.im / serviceId=… / category=ABAP Runtime`,
+2026-06-04 (see `scripts/probe-logs.mjs`): on a non-empty window,
+`format=protobuf-json` → JSON object with `resourceLogs`, `no format` /
+`format=json` → a 15 408-byte protobuf `Buffer`. (On an *empty* window the
+server returns a JSON `{}` only when `format=protobuf-json` is set;
+otherwise an empty body.)
+
 Consequences baked into the code:
 
 - `AbstractCalmConnection` returns a **`Buffer`** for non-textual
   Content-Types (reading the body as `response.text()` would mangle the
-  bytes via UTF-8). JSON/text/XML responses still parse as before.
+  bytes via UTF-8). JSON/text/XML responses still parse as before — so a
+  `format=protobuf-json` response arrives as an already-parsed object.
 - **Response shaping lives in the tool, not the client.** `listTasksTool`
-  filters client-side; `getLogsTool` decodes the protobuf into canonical
-  OTLP JSON via an embedded minimal schema (`src/tools/logs/otlpProto.ts`)
-  + `protobufjs` (`src/tools/logs/otlpLogs.ts`). The client stays
-  transport-only and returns the raw `Buffer`.
+  filters client-side; `getLogsTool` handles BOTH wire encodings: a
+  `Buffer`/`Uint8Array` is decoded into canonical OTLP JSON via an embedded
+  minimal schema (`src/tools/logs/otlpProto.ts`) + `protobufjs`
+  (`src/tools/logs/otlpLogs.ts`); a non-binary body (the JSON object, or an
+  empty `{}`) is passed through unchanged. Either way `records` ends up as
+  the same `{ resourceLogs: [...] }`. The client stays transport-only.
+- `getLogsTool` / `CalmLog.get()` forward these query params verbatim:
+  `provider` (required), `serviceId`, `category`, `version`, `format`,
+  `from`, `to`, `period`, `limit`, `offset`, `onLimit`. `category` is a
+  **load-bearing filter** — dropping it on a busy window overflows the
+  server count cap (`FORBIDDEN — Response total count is over the limit`).
+- Time window quirks: `period` is `<n>M` **minutes** (not `1h`) and is
+  **capped at 60** — `period` > 60 → `400 BAD_REQUEST "Time interval > 60
+  mins"`. `from`/`to` must be formatted **`YYYYMMDDHHmmss`** (UTC), NOT ISO
+  — an ISO timestamp returns `400 "From is not of format YYYYMMDDHHmmss"`.
 - Logs paging is non-standard: `limit`/`offset` only work alongside
   `onLimit=truncate` (the client defaults it); `top/$top/pageSize/page`
-  → 400 "Unknown filter"; `period` is `<n>M` minutes, not `1h`.
+  → 400 "Unknown filter".
 
 ## Critical pitfall: parts of SAP Cloud ALM are NOT OData
 
