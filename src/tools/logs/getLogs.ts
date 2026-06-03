@@ -9,6 +9,9 @@ import { decodeOtlpLogs } from './otlpLogs';
 export interface IGetLogsArgs {
   provider: string;
   serviceId?: string;
+  category?: string;
+  version?: string;
+  format?: string;
   from?: string;
   to?: string;
   period?: string;
@@ -37,6 +40,21 @@ const definition: ICalmToolDefinition = {
         type: 'string',
         description:
           'Service id filter, emitted as a plain `serviceId` query param. The live Logs API requires it alongside `provider` and rejects a request without it (HTTP 428).',
+      },
+      category: {
+        type: 'string',
+        description:
+          'Domain-specific log-category filter, emitted as a plain `category` query param (e.g. "ABAP Runtime"). The live Logs API owns the set of valid category names; forwarded verbatim.',
+      },
+      version: {
+        type: 'string',
+        description:
+          'Logs API query version (e.g. "V1"), forwarded as a `version` query param. Only set if the tenant expects a specific version; omit to use the API default.',
+      },
+      format: {
+        type: 'string',
+        description:
+          'Forwarded as a `format` query param (e.g. "protobuf-json"). NOTE: on the wire the Logs API has so far always responded `application/x-protobuf` regardless of this value, and the tool decodes that into OTLP JSON anyway — pass it only to probe/override server behaviour, not to change the decoded output shape.',
       },
       from: { type: 'string', description: 'ISO timestamp, inclusive start.' },
       to: { type: 'string', description: 'ISO timestamp, exclusive end.' },
@@ -81,6 +99,9 @@ const handler: CalmToolHandler<IGetLogsArgs, IGetLogsResult> = async (
     const body = await ctx.calm.getLogs().get({
       provider: args.provider,
       serviceId: args.serviceId,
+      category: args.category,
+      version: args.version,
+      format: args.format,
       from: args.from,
       to: args.to,
       period: args.period,

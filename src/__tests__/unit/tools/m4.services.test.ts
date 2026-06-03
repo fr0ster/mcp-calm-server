@@ -225,6 +225,30 @@ describe('M4 — read-only tools across 8 services', () => {
       });
     });
 
+    test('get forwards category / version / format query params', async () => {
+      const { calm, calls } = mockCalm(() => ({ logs: [] }));
+      await getLogsTool.handler(
+        { calm },
+        {
+          provider: 'exm.im',
+          serviceId: 'bc6c21e9-f673-4917-b2ad-6618b8e75be9',
+          category: 'ABAP Runtime',
+          version: 'V1',
+          format: 'protobuf-json',
+          period: '60M',
+        },
+      );
+      const params = calls[0].args[0] as Record<string, unknown>;
+      expect(params).toMatchObject({
+        provider: 'exm.im',
+        serviceId: 'bc6c21e9-f673-4917-b2ad-6618b8e75be9',
+        category: 'ABAP Runtime',
+        version: 'V1',
+        format: 'protobuf-json',
+        period: '60M',
+      });
+    });
+
     test('get forwards an explicit onLimit strategy', async () => {
       const { calm, calls } = mockCalm(() => ({ logs: [] }));
       await getLogsTool.handler(

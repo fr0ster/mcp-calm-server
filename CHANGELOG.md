@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.5.1 — 2026-06-03
+
+### Added
+
+- **`calm_logs_get` forwards `category`, `version` and `format`.** The live
+  Cloud ALM Logs query supports a domain-specific `category` filter (e.g.
+  `category=ABAP Runtime`) plus `version`/`format` knobs. The tool now
+  exposes all three in its input schema and forwards them to the client, so
+  the full live query
+  `/calm-logs/v1/logs?version=V1&period=60M&provider=…&serviceId=…&category=ABAP%20Runtime&format=protobuf-json`
+  is expressible. `format` is forwarded as-is rather than assumed inert —
+  on the wire the Logs API has so far always answered `application/x-protobuf`
+  regardless, and the tool still decodes that into OTLP JSON.
+- **`scripts/probe-logs.mjs`** — a direct (client-level) probe that runs the
+  full query plus `format`/`category`/`version` variants against a live
+  tenant and reports the raw body type/size, so their wire effect can be
+  observed instead of guessed.
+
+### Changed
+
+- Realign with `@mcp-abap-adt/calm-client@^0.5.0` (adds the `category`
+  param to `IGetLogsParams` / `CalmLog.get()`).
+
 ## 0.5.0 — 2026-05-26
 
 ### Added
