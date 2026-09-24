@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.6.0 — 2026-09-24
 
 ### Changed
 
@@ -16,12 +16,16 @@
   nothing further ships. The README's install line said the same and now names
   the four packages.
 
-- **The auth pipeline stays where it was**, deliberately:
-  `auth-broker@^1.0.5`, `auth-providers@^1.0.5`, `auth-stores@^1.0.4`, and
-  `calm-client@^0.5.0` — which is what npm serves for that package.
+- **`@mcp-abap-adt/calm-client@^0.7.0`** in `peerDependencies` and
+  `devDependencies`. 0.7.0 is the release that took that package off the facade —
+  its own peer range used to name it, so pointing at anything earlier would have
+  handed a consumer the same instruction one step deeper.
 
-  Those three still carry `@mcp-abap-adt/interfaces` transitively, so this tree
-  holds three copies of the deleted facade and will until they are upgraded. That
+- **The rest of the auth pipeline stays where it was**, deliberately:
+  `auth-broker@^1.0.5`, `auth-providers@^1.0.5`, `auth-stores@^1.0.4`.
+
+  Those two still carry `@mcp-abap-adt/interfaces` transitively, so this tree
+  holds two copies of the deleted facade and will until they are upgraded. That
   upgrade is **not** a range bump: `auth-providers` 2.x replaced
   `browser: 'none'` with an injected `IAuthorizationStrategy`, so
   `src/server/auth/buildBroker.ts` has to choose between `manualPasteStrategy`,
