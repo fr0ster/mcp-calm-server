@@ -9,7 +9,7 @@ known pitfalls, and a few hard-won facts about the upstream SAP API.
 ```
 mcp-calm-client  ──HTTP/OData──>  SAP Cloud ALM
        ▲
-       │ ICalmConnection, ILogger, ODataQuery (from @mcp-abap-adt/interfaces)
+       │ ICalmConnection (interfaces-calm), ILogger (interfaces-utils), ODataQuery
        │
 mcp-calm-server  ──MCP/stdio──>  Claude Desktop / Code / any MCP host
 ```

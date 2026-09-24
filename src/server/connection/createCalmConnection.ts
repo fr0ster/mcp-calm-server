@@ -1,8 +1,6 @@
-import type {
-  ICalmConnection,
-  ILogger,
-  ITokenRefresher,
-} from '@mcp-abap-adt/interfaces';
+import type { ITokenRefresher } from '@mcp-abap-adt/interfaces-auth';
+import type { ICalmConnection } from '@mcp-abap-adt/interfaces-calm';
+import type { ILogger } from '@mcp-abap-adt/interfaces-utils';
 import type { ICalmServerConfig } from '../config';
 import { OAuth2CalmConnection } from './OAuth2CalmConnection';
 import { SandboxCalmConnection } from './SandboxCalmConnection';

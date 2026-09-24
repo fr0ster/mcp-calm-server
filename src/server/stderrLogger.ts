@@ -1,4 +1,4 @@
-import type { ILogger } from '@mcp-abap-adt/interfaces';
+import type { ILogger } from '@mcp-abap-adt/interfaces-utils';
 
 /**
  * Minimal `ILogger` that writes every level to **stderr only**.

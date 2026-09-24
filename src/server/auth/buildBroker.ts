@@ -4,11 +4,9 @@ import {
   ClientCredentialsProvider,
 } from '@mcp-abap-adt/auth-providers';
 import { XsuaaSessionStore } from '@mcp-abap-adt/auth-stores';
-import type {
-  ILogger,
-  ISessionStore,
-  ITokenProvider,
-} from '@mcp-abap-adt/interfaces';
+import type { ITokenProvider } from '@mcp-abap-adt/interfaces-auth';
+import type { ISessionStore } from '@mcp-abap-adt/interfaces-auth-sap';
+import type { ILogger } from '@mcp-abap-adt/interfaces-utils';
 import type { ICalmServerConfig } from '../config';
 import { buildLegacyShimStore } from './legacyEnvShim';
 

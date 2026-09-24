@@ -1,4 +1,4 @@
-import type { ITokenRefresher } from '@mcp-abap-adt/interfaces';
+import type { ITokenRefresher } from '@mcp-abap-adt/interfaces-auth';
 import {
   AbstractCalmConnection,
   type IAbstractCalmConnectionOptions,

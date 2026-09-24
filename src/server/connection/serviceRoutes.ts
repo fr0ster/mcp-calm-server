@@ -1,4 +1,4 @@
-import type { CalmService } from '@mcp-abap-adt/interfaces';
+import type { CalmService } from '@mcp-abap-adt/interfaces-calm';
 
 export type CalmServiceRouteMap = Record<CalmService, string>;
 
