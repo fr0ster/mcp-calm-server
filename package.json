@@ -1,6 +1,6 @@
 {
   "name": "@mcp-abap-adt/calm-server",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "MCP server + reusable tool primitives for SAP Cloud ALM, backed by @mcp-abap-adt/calm-client.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -67,9 +67,9 @@
     "tools"
   ],
   "peerDependencies": {
-    "@mcp-abap-adt/auth-broker": "^1.0.5",
-    "@mcp-abap-adt/auth-providers": "^1.0.5",
-    "@mcp-abap-adt/auth-stores": "^1.0.4",
+    "@mcp-abap-adt/auth-broker": "^2.2.0",
+    "@mcp-abap-adt/auth-providers": "^2.2.1",
+    "@mcp-abap-adt/auth-stores": "^1.2.0",
     "@mcp-abap-adt/calm-client": "^0.7.0",
     "@mcp-abap-adt/interfaces-auth": "^1.2.0",
     "@mcp-abap-adt/interfaces-auth-sap": "^1.0.0",
@@ -83,9 +83,9 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.4",
-    "@mcp-abap-adt/auth-broker": "^1.0.5",
-    "@mcp-abap-adt/auth-providers": "^1.0.5",
-    "@mcp-abap-adt/auth-stores": "^1.0.4",
+    "@mcp-abap-adt/auth-broker": "^2.2.0",
+    "@mcp-abap-adt/auth-providers": "^2.2.1",
+    "@mcp-abap-adt/auth-stores": "^1.2.0",
     "@mcp-abap-adt/calm-client": "^0.7.0",
     "@mcp-abap-adt/interfaces-auth": "^1.2.0",
     "@mcp-abap-adt/interfaces-auth-sap": "^1.0.0",
