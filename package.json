@@ -1,6 +1,6 @@
 {
   "name": "@mcp-abap-adt/calm-server",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "MCP server + reusable tool primitives for SAP Cloud ALM, backed by @mcp-abap-adt/calm-client.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -54,7 +54,7 @@
     "url": "https://github.com/fr0ster/mcp-calm-server/issues"
   },
   "author": "Oleksii Kyslytsia <oleksij.kyslytsja@gmail.com>",
-  "license": "MIT",
+  "license": "GPL-3.0-only",
   "publishConfig": {
     "access": "public"
   },
