@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.8.0 — 2026-09-24
+
+### Licence
+
+- **This package is now `GPL-3.0-only`.** It was MIT up to and including 0.7.0,
+  and **those versions stay MIT** — a licence change is not retroactive, and
+  anyone already using 0.7.0 under MIT keeps that grant for 0.7.0.
+
+  **Why the GPL here and the LGPL elsewhere in this family.** The distinction is
+  linking. `interfaces-*`, `adt-clients`, `calm-client`, `auth-*` and
+  `header-validator` are libraries: you import them into your own program, and the
+  LGPL exists precisely so that doing so puts no licence obligation on your
+  program. This is not a library — it is an MCP server, a program you run, the
+  same shape as `mcp-abap-adt-proxy`, which went `GPL-3.0-only` in its 3.0.0. What
+  the GPL asks is of whoever distributes a modified *server*, not of whoever talks
+  to one over stdio.
+
+  `LICENSE` carries the full GPL-3.0 text, replacing the MIT text, and matches
+  how the proxy ships it: one file, named in `files`, no separate `COPYING` — that
+  pairing belongs to the LGPL packages, where both texts are required.
+
+  **It was missed in the relicensing pass.** Fifteen repositories moved off MIT on
+  2026-09-03; this one did not, and the gap only became visible while publishing
+  0.7.0 — which therefore went to npm under MIT an hour ago. 0.8.0 is the
+  correction, and the version moves because a licence is part of what a release
+  says.
+
 ## 0.7.0 — 2026-09-24
 
 ### Changed

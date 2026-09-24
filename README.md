@@ -278,4 +278,6 @@ stdio bin, lists tools, calls a handful of read endpoints, and exits
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+`GPL-3.0-only` — see [LICENSE](LICENSE).
+
+This is a server you run, not a library you link, which is why it carries the GPL where the contract and client packages in this family carry the LGPL. Versions up to and including 0.7.0 were released under MIT and stay MIT: a licence change is not retroactive.
