@@ -38,7 +38,7 @@ npm install @mcp-abap-adt/calm-server
 ```bash
 npm install @mcp-abap-adt/calm-server
 # peers:
-npm install @mcp-abap-adt/calm-client @mcp-abap-adt/interfaces @modelcontextprotocol/sdk
+npm install @mcp-abap-adt/calm-client @mcp-abap-adt/interfaces-calm @mcp-abap-adt/interfaces-auth @mcp-abap-adt/interfaces-auth-sap @mcp-abap-adt/interfaces-utils @modelcontextprotocol/sdk
 ```
 
 ## Standalone: running the server

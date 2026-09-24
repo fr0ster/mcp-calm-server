@@ -1,5 +1,5 @@
 import { CalmApiError } from '@mcp-abap-adt/calm-client';
-import type { ITokenRefresher } from '@mcp-abap-adt/interfaces';
+import type { ITokenRefresher } from '@mcp-abap-adt/interfaces-auth';
 import type { ICalmServerConfig } from '../../../server/config';
 import { AbstractCalmConnection } from '../../../server/connection/AbstractCalmConnection';
 import { createCalmConnection } from '../../../server/connection/createCalmConnection';

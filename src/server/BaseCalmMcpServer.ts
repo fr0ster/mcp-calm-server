@@ -1,5 +1,5 @@
 import type { CalmClient } from '@mcp-abap-adt/calm-client';
-import type { ILogger } from '@mcp-abap-adt/interfaces';
+import type { ILogger } from '@mcp-abap-adt/interfaces-utils';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { CalmToolRegistry } from '../registry/CalmToolRegistry';
 import type { ICalmHandlerContext, ICalmHandlerGroup } from '../registry/types';

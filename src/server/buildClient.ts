@@ -1,5 +1,5 @@
 import { CalmClient } from '@mcp-abap-adt/calm-client';
-import type { ILogger } from '@mcp-abap-adt/interfaces';
+import type { ILogger } from '@mcp-abap-adt/interfaces-utils';
 import { buildAuthBroker } from './auth/buildBroker';
 import type { ICalmServerConfig } from './config';
 import { createCalmConnection } from './connection/createCalmConnection';

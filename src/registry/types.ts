@@ -1,5 +1,5 @@
 import type { CalmClient } from '@mcp-abap-adt/calm-client';
-import type { ILogger } from '@mcp-abap-adt/interfaces';
+import type { ILogger } from '@mcp-abap-adt/interfaces-utils';
 
 /**
  * Handler context injected by the registry when a tool is invoked.

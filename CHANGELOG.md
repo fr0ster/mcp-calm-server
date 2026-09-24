@@ -1,5 +1,39 @@
 # Changelog
 
+## 0.6.0 — 2026-09-24
+
+### Changed
+
+- **The contracts come from the packages that declare them, not from the deleted
+  facade.** `@mcp-abap-adt/interfaces@^7.1.0` is gone from `peerDependencies` and
+  `devDependencies`; in its place `@mcp-abap-adt/interfaces-calm@^1.0.1`,
+  `-auth@^1.2.0`, `-auth-sap@^1.0.0` and `-utils@^1.1.0`, with
+  `@mcp-abap-adt/logger@^0.4.0`. 12 files repointed.
+
+  **The peer range is the part that reaches a consumer.** It told everyone
+  installing this server to add `@mcp-abap-adt/interfaces`, and that package is
+  deleted as of its 52.0.0 — npm serves 51.0.0 to whoever is pinned to it and
+  nothing further ships. The README's install line said the same and now names
+  the four packages.
+
+- **`@mcp-abap-adt/calm-client@^0.7.0`** in `peerDependencies` and
+  `devDependencies`. 0.7.0 is the release that took that package off the facade —
+  its own peer range used to name it, so pointing at anything earlier would have
+  handed a consumer the same instruction one step deeper.
+
+- **The rest of the auth pipeline stays where it was**, deliberately:
+  `auth-broker@^1.0.5`, `auth-providers@^1.0.5`, `auth-stores@^1.0.4`.
+
+  Those two still carry `@mcp-abap-adt/interfaces` transitively, so this tree
+  holds two copies of the deleted facade and will until they are upgraded. That
+  upgrade is **not** a range bump: `auth-providers` 2.x replaced
+  `browser: 'none'` with an injected `IAuthorizationStrategy`, so
+  `src/server/auth/buildBroker.ts` has to choose between `manualPasteStrategy`,
+  `externalCodeStrategy` and `browserCallbackStrategy` — a decision about how a
+  human logs in to this server, not a mechanical repoint. It is left for its own
+  change, with the compiler error recorded rather than guessed at:
+  `TS2353: 'browser' does not exist in type 'AuthorizationCodeProviderConfig'`.
+
 ## 0.5.1 — 2026-06-03
 
 ### Added

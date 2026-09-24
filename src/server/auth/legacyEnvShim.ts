@@ -1,5 +1,5 @@
 import { SafeXsuaaSessionStore } from '@mcp-abap-adt/auth-stores';
-import type { ISessionStore } from '@mcp-abap-adt/interfaces';
+import type { ISessionStore } from '@mcp-abap-adt/interfaces-auth-sap';
 import type { ICalmServerConfig } from '../config';
 
 /**

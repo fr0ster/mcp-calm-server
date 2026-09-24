@@ -4,8 +4,8 @@ import type {
   ICalmConnection,
   ICalmRequestOptions,
   ICalmResponse,
-  ILogger,
-} from '@mcp-abap-adt/interfaces';
+} from '@mcp-abap-adt/interfaces-calm';
+import type { ILogger } from '@mcp-abap-adt/interfaces-utils';
 import {
   type CalmServiceRouteMap,
   DEFAULT_CALM_SERVICE_ROUTES,
