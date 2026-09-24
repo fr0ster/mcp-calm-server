@@ -1,6 +1,7 @@
 import { AuthBroker } from '@mcp-abap-adt/auth-broker';
 import {
   AuthorizationCodeProvider,
+  browserCallbackStrategy,
   ClientCredentialsProvider,
 } from '@mcp-abap-adt/auth-providers';
 import {
@@ -47,10 +48,23 @@ describe('buildAuthBroker', () => {
         uaaUrl: 'https://uaa.example',
         clientId: 'cid',
         clientSecret: 'secret',
-        browser: 'none',
       }),
     );
     expect(ClientCredentialsProvider).not.toHaveBeenCalled();
+  });
+
+  // The thing worth pinning is that this server opens no browser: it speaks over
+  // stdio and has no display. In auth-providers 1.x that was `browser: 'none'` on
+  // the provider; in 2.x the provider takes a strategy and the flag lives there,
+  // so the assertion follows it rather than disappearing with the old field.
+  test('authorization_code prints the URL and opens nothing', async () => {
+    await buildAuthBroker({ ...baseConfig, authFlow: 'authorization_code' });
+    expect(browserCallbackStrategy).toHaveBeenCalledWith({ browser: 'none' });
+    const passed = (browserCallbackStrategy as jest.Mock).mock.results[0]
+      ?.value;
+    expect(AuthorizationCodeProvider).toHaveBeenCalledWith(
+      expect.objectContaining({ authorization: passed }),
+    );
   });
 
   test('inline CALM_UAA_* uses SafeXsuaaSessionStore (legacy shim)', async () => {

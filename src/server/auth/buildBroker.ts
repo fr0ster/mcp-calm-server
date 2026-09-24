@@ -1,6 +1,7 @@
 import { AuthBroker } from '@mcp-abap-adt/auth-broker';
 import {
   AuthorizationCodeProvider,
+  browserCallbackStrategy,
   ClientCredentialsProvider,
 } from '@mcp-abap-adt/auth-providers';
 import { XsuaaSessionStore } from '@mcp-abap-adt/auth-stores';
@@ -59,7 +60,12 @@ export async function buildAuthBroker(
           uaaUrl,
           clientId: uaaClientId,
           clientSecret: uaaClientSecret,
-          browser: 'none',
+          // `browser: 'none'` moved into the strategy in auth-providers 2.x, with
+          // the same meaning: print the authorization URL, open nothing, and wait
+          // for the redirect on the local callback port. An MCP server talks over
+          // stdio and has no display to open — the operator follows the printed
+          // URL from wherever they are.
+          authorization: browserCallbackStrategy({ browser: 'none' }),
           logger,
         })
       : new ClientCredentialsProvider({

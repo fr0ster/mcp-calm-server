@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.7.0 — 2026-09-24
+
+### Changed
+
+- **The auth pipeline moves to 2.x, and the deleted facade is gone from this tree
+  entirely.** `auth-broker@^2.2.0` (was `^1.0.5`), `auth-providers@^2.2.1` (was
+  `^1.0.5`), `auth-stores@^1.2.0` (was `^1.0.4`), in `peerDependencies` and
+  `devDependencies` both. `npm ls @mcp-abap-adt/interfaces` now prints `(empty)`
+  where it printed three copies in 0.6.0 and two after `calm-client@0.7.0`.
+
+- **`browser: 'none'` became `authorization: browserCallbackStrategy({ browser: 'none' })`.**
+  `auth-providers` 2.x took the flag off the provider and put it on an injected
+  `IAuthorizationStrategy` — **with the same meaning**, which is why this is a
+  mechanical change and not a decision about how login works: `'none'` and
+  `'headless'` print the authorization URL and wait for the redirect on the local
+  callback port; `'auto'`, `'system'`, `'chrome'` and the rest open a browser. This
+  server speaks over stdio and has no display, so it prints.
+
+  Read out of the 1.x implementation rather than assumed: `launchBrowser` in
+  `auth/browserAuth.js` answers `'none' | 'headless'` by announcing the URL, the
+  callback port and how to paste a code from another machine — and returns without
+  opening anything. The 2.x `CallbackStrategyOptions` documents the same set.
+
+- **The unit test follows the behaviour rather than the field.** It asserted
+  `browser: 'none'` on the provider; that assertion would have vanished with the
+  field. It now pins both halves — the strategy is built with `{ browser: 'none' }`
+  and the provider receives exactly that strategy — under a name that says what is
+  being protected: *authorization_code prints the URL and opens nothing*.
+
 ## 0.6.0 — 2026-09-24
 
 ### Changed
