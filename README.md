@@ -25,6 +25,9 @@ single `.env` switch; gates skip cleanly when no backend is wired.
 
 ## Installation
 
+Requires Node.js 22 or 24 — the versions `@mcp-abap-adt/auth-providers`,
+which obtains the server's tokens, supports.
+
 ### As a standalone MCP server
 
 ```bash
@@ -38,8 +41,16 @@ npm install @mcp-abap-adt/calm-server
 ```bash
 npm install @mcp-abap-adt/calm-server
 # peers:
-npm install @mcp-abap-adt/calm-client @mcp-abap-adt/interfaces-calm @mcp-abap-adt/interfaces-auth @mcp-abap-adt/interfaces-auth-sap @mcp-abap-adt/interfaces-utils @modelcontextprotocol/sdk
+npm install @mcp-abap-adt/calm-client @mcp-abap-adt/interfaces-calm @mcp-abap-adt/interfaces-auth @mcp-abap-adt/interfaces-utils @modelcontextprotocol/sdk
 ```
+
+The peers are the packages whose types this package's API names, so your
+code and this package must share one copy: `CalmClient` (`calm-client`),
+`ICalmConnection` (`interfaces-calm`), `ITokenRefresher` (`interfaces-auth`)
+and `ILogger` (`interfaces-utils`). The auth pipeline the standalone server
+runs — `auth-broker`, `auth-providers`, `auth-stores` and
+`interfaces-auth-sap` — is a regular dependency: nothing you import from this
+package exposes it.
 
 ## Standalone: running the server
 
@@ -114,6 +125,12 @@ npx mcp-auth --service-key ./sk.json --output ./DEFAULT.env \
              --type xsuaa --browser auto
 ```
 
+The server itself never logs in interactively: it speaks over stdio and has
+no one to show a login page to. With `authorization_code` it uses the refresh
+token in `./DEFAULT.env`; when there is none, or the identity provider refuses
+it, the call fails with `LoginRequiredError` (`code: 'LOGIN_REQUIRED'`), whose
+message is the `mcp-auth` command to run. Run it and restart the server.
+
 Then in your `.env`:
 
 ```
@@ -123,7 +140,12 @@ CALM_AUTH_FLOW=authorization_code   # or client_credentials
 CALM_DESTINATION=DEFAULT
 ```
 
-The server's runtime auth pipeline is `@mcp-abap-adt/auth-broker`.
+The server's runtime auth pipeline is `@mcp-abap-adt/auth-broker`. The
+broker writes each new token (and refresh token) back to `./DEFAULT.env`; it
+does not write `CALM_BASE_URL` there. The URL the broker needs for a session
+comes from `CALM_BASE_URL` at read time, so a session file without
+`XSUAA_MCP_URL` — which is what `mcp-auth` writes for a Cloud ALM key — works
+as it is.
 
 > Note: `buildCalmClient` is async since v0.4.0 (was sync in v0.3.x). Library
 > consumers must `await` it.
@@ -157,7 +179,8 @@ Useful when you want to expose Cloud ALM tools alongside ADT tools,
 Reports tools, or your own domain tools in a single MCP process.
 
 ```ts
-import { CalmClient, CalmConnection } from '@mcp-abap-adt/calm-client';
+import { CalmClient } from '@mcp-abap-adt/calm-client';
+import { SandboxCalmConnection } from '@mcp-abap-adt/calm-server/connection';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import {
   ALL_GROUPS,
@@ -168,8 +191,10 @@ import {
 } from '@mcp-abap-adt/calm-server';
 
 // Option A — BaseCalmMcpServer with a curated subset
+// `OAuth2CalmConnection` takes a `tokenRefresher` (an `ITokenRefresher`
+// from `@mcp-abap-adt/interfaces-auth`) instead of an API key.
 const calm = new CalmClient(
-  new CalmConnection({ baseUrl, apiKey }),
+  new SandboxCalmConnection({ baseUrl, apiKey }),
 );
 const server = new BaseCalmMcpServer({
   name: 'my-mcp',
@@ -190,6 +215,7 @@ Subpath exports:
 ```ts
 import { ALL_GROUPS } from '@mcp-abap-adt/calm-server/tools';
 import { CalmToolRegistry } from '@mcp-abap-adt/calm-server/registry';
+import { createCalmConnection } from '@mcp-abap-adt/calm-server/connection';
 ```
 
 ## Tool surface (54 tools across 9 services)
@@ -239,7 +265,7 @@ integration tests are opt-in (see Live-tenant integration below).
 
 ```bash
 CALM_LOG_LEVEL=debug         # error | warn | info | debug
-DEBUG_CALM_CONNECTORS=true   # CalmConnection retries, 401 refresh, URLs
+DEBUG_CALM_CONNECTORS=true   # connection retries, 401 refresh, URLs
 DEBUG_CALM_LIBS=true         # resource-client internals
 DEBUG_CALM_TESTS=true        # test execution progress
 ```

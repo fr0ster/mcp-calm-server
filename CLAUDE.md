@@ -58,6 +58,29 @@ interface. Tokens come from `@mcp-abap-adt/auth-broker` (see
 `auth/buildBroker.ts`), injected into the connection as an
 `ITokenRefresher`.
 
+## Auth pipeline: dependency, not peer
+
+`auth-broker`, `auth-providers`, `auth-stores` and `interfaces-auth-sap` are
+regular `dependencies`: only `src/server/auth/` imports them, and nothing the
+`exports` map reaches names their types. The peers are the packages whose
+types the public API names — `calm-client`, `interfaces-calm`,
+`interfaces-auth`, `interfaces-utils` (and the MCP SDK). Measure before moving
+one: grep `src/` without tests and the built `dist/*.js` / `dist/*.d.ts`.
+`engines.node` is `^22 || ^24` because `auth-providers` (and `auth-broker`)
+require it at runtime.
+
+Two things auth-broker 3 made this server's job (`src/server/auth/`):
+
+- **`serviceUrl`.** The broker refuses a session with no `serviceUrl`, and the
+  `{destination}.env` `mcp-auth` writes for a Cloud ALM key has none.
+  `TargetUrlSessionStore` answers `CALM_BASE_URL` on reads and writes back only
+  the URL the session already holds — never write the base URL into the
+  session before building the broker.
+- **No interactive login.** `allowBrowserAuth` is gone; the
+  authorization_code provider gets `refuseLogin()`, a strategy that throws
+  `LoginRequiredError` with the `mcp-auth` hint. The provider is built by a
+  factory so the broker seeds it with the session's refresh token.
+
 ## Critical pitfall: Logs default to OTLP protobuf (but `format=protobuf-json` flips to JSON)
 
 `/calm-logs/v1/logs` (GET) responds `application/x-protobuf` by default —
