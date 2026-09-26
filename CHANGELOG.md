@@ -1,5 +1,80 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- **BREAKING: the auth pipeline moves to the auth-broker 3 family, and out of
+  `peerDependencies`.** `auth-broker@^3.0.0` (was `^2.2.0`),
+  `auth-providers@^4.2.0` (was `^2.2.1`), `auth-stores@^1.2.3` (was `^1.2.0`)
+  and `interfaces-auth-sap@^1.0.1` (was `^1.0.0`) are now regular
+  `dependencies`. Measured, not assumed: only `src/server/auth/` imports them —
+  `buildAuthBroker` constructs the broker, the providers and the stores at
+  runtime — and none of their types reaches a file the `exports` map serves
+  (`.`, `./tools`, `./registry`, `./connection`). A peer range told a consumer
+  to install and match a pipeline it never touches; under the 3.x family it
+  conflicted with the consumer's own tree. The install now holds one copy of
+  each contract package.
+
+  **What a consumer must change:** drop `auth-broker`, `auth-providers`,
+  `auth-stores` and `interfaces-auth-sap` from your own dependencies if you
+  added them only for this package, or move them to the 3.x family versions
+  above if you use them yourself.
+
+- **BREAKING: the remaining peers move.** `calm-client@^0.8.0` (was `^0.7.0`)
+  and `interfaces-auth@^2.1.0` (was `^1.2.0`). They stay peers, as do
+  `interfaces-calm@^1.0.1` and `interfaces-utils@^1.1.0`, because the public
+  API names their types: `CalmClient` in `IBaseCalmMcpServerOptions` and the
+  handler context, `ICalmConnection` and `ITokenRefresher` in
+  `@mcp-abap-adt/calm-server/connection`, `ILogger` throughout — your code and
+  this package must share one copy. A caret on 0.x pins the minor, so a
+  consumer on `calm-client` 0.7 must move to 0.8.
+
+- **BREAKING: Node.js 22 or 24** — `engines: "^22 || ^24"` (was `>=18.0.0`),
+  because `auth-providers` 4 and `auth-broker` 3, now runtime dependencies,
+  require it.
+
+- **The `authorization_code` flow refuses an interactive login with
+  `LoginRequiredError`** (`code: 'LOGIN_REQUIRED'`), whose message is the
+  `mcp-auth` command to run. auth-broker 3 removed `allowBrowserAuth`, which
+  this server set to `false` for that flow so that a session without a usable
+  refresh token failed fast instead of waiting for a login nobody could see;
+  the broker's migration note puts that refusal into the provider's
+  authorization strategy, and so does this server (`refuseLogin`). For a
+  session with no refresh token nothing changes: the 2.x broker refused it
+  (`BROWSER_AUTH_REQUIRED`) before calling the provider. One path does change:
+  with a stored refresh token the 2.x broker did call the provider, and if the
+  identity provider refused that token the provider could fall back to its
+  `browser: 'none'` strategy — print the login URL to stderr and wait on the
+  callback port while the tool call hung. That now fails at once with
+  `LoginRequiredError`. The provider is built by a factory, which the broker
+  seeds with the refresh token and the last token the session holds.
+
+- **`CALM_BASE_URL` is handed to the broker without being written into the
+  session.** auth-broker 3 refuses a session with no `serviceUrl`, and the
+  `./{destination}.env` `mcp-auth` writes for a Cloud ALM key has none. The
+  session store is wrapped in `TargetUrlSessionStore`, which answers
+  `CALM_BASE_URL` as the `serviceUrl` on reads and, on writes, keeps whatever
+  URL the session already holds — or none. The file gains the new token and
+  refresh token, as before, and no `XSUAA_MCP_URL`. The same approach as
+  `mcp-abap-adt-proxy`, which answered the same refusal the same way.
+
+- auth-broker 3's other changes reach the server as follows:
+  `refreshToken()` — the one the connection calls after a 401 — now always
+  obtains a new token instead of returning the cached one it had just been
+  refused; provider errors arrive unchanged (by class and `code`) instead of
+  rewrapped; the broker no longer copies the client secret into the session.
+
+### Documentation
+
+- README: Node.js 22/24, the corrected peer list and why each is a peer,
+  `LoginRequiredError` and what to do about it, the session file the broker
+  writes. The library example no longer imports `CalmConnection` from
+  `calm-client`, which has not shipped it since 0.4.0; it uses
+  `SandboxCalmConnection` from `@mcp-abap-adt/calm-server/connection`.
+- CLAUDE.md: why the auth pipeline is a dependency and not a peer, and the two
+  things auth-broker 3 made this server's job.
+
 ## 0.8.0 — 2026-09-24
 
 ### Licence

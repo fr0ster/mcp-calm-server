@@ -43,7 +43,7 @@
     "prepublishOnly": "npm run build"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": "^22 || ^24"
   },
   "repository": {
     "type": "git",
@@ -67,28 +67,24 @@
     "tools"
   ],
   "peerDependencies": {
-    "@mcp-abap-adt/auth-broker": "^2.2.0",
-    "@mcp-abap-adt/auth-providers": "^2.2.1",
-    "@mcp-abap-adt/auth-stores": "^1.2.0",
-    "@mcp-abap-adt/calm-client": "^0.7.0",
-    "@mcp-abap-adt/interfaces-auth": "^1.2.0",
-    "@mcp-abap-adt/interfaces-auth-sap": "^1.0.0",
+    "@mcp-abap-adt/calm-client": "^0.8.0",
+    "@mcp-abap-adt/interfaces-auth": "^2.1.0",
     "@mcp-abap-adt/interfaces-calm": "^1.0.1",
     "@mcp-abap-adt/interfaces-utils": "^1.1.0",
     "@modelcontextprotocol/sdk": "^1.0.0"
   },
   "dependencies": {
+    "@mcp-abap-adt/auth-broker": "^3.0.0",
+    "@mcp-abap-adt/auth-providers": "^4.2.0",
+    "@mcp-abap-adt/auth-stores": "^1.2.3",
+    "@mcp-abap-adt/interfaces-auth-sap": "^1.0.1",
     "dotenv": "^17.3.1",
     "protobufjs": "^8.4.2"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.4",
-    "@mcp-abap-adt/auth-broker": "^2.2.0",
-    "@mcp-abap-adt/auth-providers": "^2.2.1",
-    "@mcp-abap-adt/auth-stores": "^1.2.0",
-    "@mcp-abap-adt/calm-client": "^0.7.0",
-    "@mcp-abap-adt/interfaces-auth": "^1.2.0",
-    "@mcp-abap-adt/interfaces-auth-sap": "^1.0.0",
+    "@mcp-abap-adt/calm-client": "^0.8.0",
+    "@mcp-abap-adt/interfaces-auth": "^2.1.0",
     "@mcp-abap-adt/interfaces-calm": "^1.0.1",
     "@mcp-abap-adt/interfaces-utils": "^1.1.0",
     "@mcp-abap-adt/logger": "^0.4.0",
