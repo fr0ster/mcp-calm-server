@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.9.0 — 2026-09-26
+
 ### Changed
 
 - **BREAKING: the auth pipeline moves to the auth-broker 3 family, and out of
