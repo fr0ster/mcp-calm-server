@@ -146,9 +146,11 @@ describe('buildAuthBroker', () => {
         uaaClientSecret: 'secret-s',
       });
     await buildAuthBroker(noInline);
+    // No default URL for the store: it would write one into a session it
+    // creates. The broker learns CALM_BASE_URL through TargetUrlSessionStore.
     expect(XsuaaSessionStore).toHaveBeenCalledWith(
       process.cwd(),
-      'https://t.eu10.alm.cloud.sap',
+      '',
       undefined,
     );
     expect(SafeXsuaaSessionStore).not.toHaveBeenCalled();

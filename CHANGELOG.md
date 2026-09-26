@@ -58,7 +58,11 @@
   session store is wrapped in `TargetUrlSessionStore`, which answers
   `CALM_BASE_URL` as the `serviceUrl` on reads and, on writes, keeps whatever
   URL the session already holds — or none. The file gains the new token and
-  refresh token, as before, and no `XSUAA_MCP_URL`. The same approach as
+  refresh token, as before, and no `XSUAA_MCP_URL`. The store itself is built
+  with an empty default URL: `XsuaaSessionStore` writes its `defaultServiceUrl`
+  into a session it creates, so with `CALM_BASE_URL` there the first token
+  write of a new session put `XSUAA_MCP_URL` into the file after all (found in
+  review; measured on the real store). The same approach as
   `mcp-abap-adt-proxy`, which answered the same refusal the same way.
 
 - auth-broker 3's other changes reach the server as follows:

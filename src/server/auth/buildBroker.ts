@@ -56,6 +56,21 @@ interface IUaaCredentials {
 }
 
 /**
+ * The session store the server keeps its tokens in.
+ *
+ * Built with an empty `defaultServiceUrl`: `XsuaaSessionStore` writes that
+ * default into a session it creates, so `CALM_BASE_URL` given here landed in
+ * `{destination}.env` as `XSUAA_MCP_URL` on the first token write. The broker
+ * learns the URL from `TargetUrlSessionStore` on reads; the file needs none.
+ */
+export function createSessionStore(
+  directory: string,
+  logger?: ILogger,
+): XsuaaSessionStore {
+  return new XsuaaSessionStore(directory, '', logger);
+}
+
+/**
  * Assemble an `AuthBroker` from server config.
  *
  * - Session store: the legacy `SafeXsuaaSessionStore` shim when the `.env`
@@ -78,7 +93,7 @@ export async function buildAuthBroker(
 ): Promise<AuthBroker> {
   const shimStore = await buildLegacyShimStore(config);
   const ownStore: ISessionStore =
-    shimStore ?? new XsuaaSessionStore(process.cwd(), config.baseUrl, logger);
+    shimStore ?? createSessionStore(process.cwd(), logger);
 
   const sessionAuth = await ownStore.getAuthorizationConfig(config.destination);
   const uaaUrl = config.uaaUrl || sessionAuth?.uaaUrl;

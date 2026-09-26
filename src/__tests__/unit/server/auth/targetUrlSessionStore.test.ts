@@ -1,7 +1,7 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { XsuaaSessionStore } from '@mcp-abap-adt/auth-stores';
+import { createSessionStore } from '../../../../server/auth/buildBroker';
 import { TargetUrlSessionStore } from '../../../../server/auth/targetUrlSessionStore';
 
 const BASE_URL = 'https://t.eu10.alm.cloud.sap/api';
@@ -22,11 +22,10 @@ describe('TargetUrlSessionStore', () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
+  // The store exactly as the server builds it: a default URL given to the
+  // store itself would be written into a session it creates.
   function wrap(): TargetUrlSessionStore {
-    return new TargetUrlSessionStore(
-      new XsuaaSessionStore(dir, 'https://placeholder.invalid'),
-      BASE_URL,
-    );
+    return new TargetUrlSessionStore(createSessionStore(dir), BASE_URL);
   }
 
   test('reads answer CALM_BASE_URL for a session that holds no URL', async () => {
@@ -75,5 +74,20 @@ describe('TargetUrlSessionStore', () => {
     });
     expect(read()).toContain('XSUAA_MCP_URL=https://own.example');
     expect(read()).toContain('XSUAA_JWT_TOKEN=new');
+  });
+
+  test('the first token write creates a session file without CALM_BASE_URL', async () => {
+    // No session yet: the store creates one. Built with CALM_BASE_URL as its
+    // default, it wrote XSUAA_MCP_URL into the new file (found in review).
+    const store = wrap();
+    await store.setConnectionConfig('DEFAULT', {
+      serviceUrl: BASE_URL,
+      authorizationToken: 'first',
+      authType: 'jwt',
+    });
+    const content = read();
+    expect(content).toContain('XSUAA_JWT_TOKEN=first');
+    expect(content).not.toContain(BASE_URL);
+    expect(content).not.toContain('XSUAA_MCP_URL');
   });
 });
