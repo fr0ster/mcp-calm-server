@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.9.2 — 2026-09-27
+
+### Added
+
+- **`calm-mcp help` and `calm-mcp version`** (also `--help`/`-h`, `--version`/`-v`): `help` / `--help` / `-h` and `version` / `--version` / `-v` — the same set in every CLI of the family, each answering before anything starts or connects. `calm-mcp` had neither — every argument started the server, which stopped on a missing `CALM_MODE`. The help lists the environment the server reads.
+
 ## 0.9.1 — 2026-09-27
 
 ### Changed
