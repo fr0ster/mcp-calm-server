@@ -66,8 +66,8 @@ regular `dependencies`: only `src/server/auth/` imports them, and nothing the
 types the public API names — `calm-client`, `interfaces-calm`,
 `interfaces-auth`, `interfaces-utils` (and the MCP SDK). Measure before moving
 one: grep `src/` without tests and the built `dist/*.js` / `dist/*.d.ts`.
-`engines.node` is `^22 || ^24` because `auth-providers` (and `auth-broker`)
-require it at runtime.
+`engines.node` is `^22 || ^24 || ^26`, as `auth-providers` (and `auth-broker`)
+require at runtime.
 
 Two things auth-broker 3 made this server's job (`src/server/auth/`):
 

@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## 0.9.1 — 2026-09-27
+
+### Changed
+
+- **Node.js 26 is supported**: `engines` is `"^22 || ^24 || ^26"`. Under Node 26
+  npm skipped every release whose `engines` did not admit it and installed the
+  newest one that did — silently an older release. Measured with the proxy:
+  `npm i -g @mcp-abap-adt/proxy` on Node 26.7.0 installed 4.2.0 while 5.0.1 was
+  `latest`.
+
 ## 0.9.0 — 2026-09-26
 
 ### Changed

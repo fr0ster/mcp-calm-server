@@ -25,7 +25,7 @@ single `.env` switch; gates skip cleanly when no backend is wired.
 
 ## Installation
 
-Requires Node.js 22 or 24 — the versions `@mcp-abap-adt/auth-providers`,
+Requires Node.js 22, 24 or 26 — the versions `@mcp-abap-adt/auth-providers`,
 which obtains the server's tokens, supports.
 
 ### As a standalone MCP server
